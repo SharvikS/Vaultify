@@ -96,41 +96,41 @@ private var currencyCode: String {
 
 struct ContentView: View {
     @Query(sort: \Appliance.purchaseDate, order: .reverse) private var appliances: [Appliance]
-    @AppStorage("appearanceMode") private var appearanceMode = AppAppearance.system.rawValue
+    @AppStorage("appearanceMode") private var appearanceMode = AppAppearance.dark.rawValue
 
     var body: some View {
         TabView {
             DashboardView(appliances: appliances, appearanceMode: $appearanceMode)
                 .tabItem {
-                    Label("Today", systemImage: "gauge.with.dots.needle.50percent")
+                    Label("Vault", systemImage: "lock.shield")
                 }
 
             ApplianceListView()
                 .tabItem {
-                    Label("Appliances", systemImage: "house.and.flag")
+                    Label("Assets", systemImage: "square.stack.3d.up")
                 }
 
             ForecastView(appliances: appliances)
                 .tabItem {
-                    Label("Forecast", systemImage: "calendar.badge.clock")
+                    Label("Horizon", systemImage: "point.3.connected.trianglepath.dotted")
                 }
 
             IntelligenceView(appliances: appliances)
                 .tabItem {
-                    Label("Intel", systemImage: "sparkles")
+                    Label("Oracle", systemImage: "sparkles")
                 }
 
             ReportsView(appliances: appliances)
                 .tabItem {
-                    Label("Reports", systemImage: "doc.richtext")
+                    Label("Dossier", systemImage: "doc.badge.gearshape")
                 }
 
             SettingsView(appearanceMode: $appearanceMode, appliances: appliances)
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Label("Control", systemImage: "slider.horizontal.3")
                 }
         }
-        .tint(.teal)
+        .tint(.mint)
         .preferredColorScheme((AppAppearance(rawValue: appearanceMode) ?? .system).colorScheme)
     }
 }
@@ -188,72 +188,25 @@ struct DashboardView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
-                    if appliances.isEmpty {
-                        EmptyStateView(
-                            title: "Build your appliance vault",
-                            message: "Add the first appliance manually or use the invoice scan flow to prefill the essentials.",
-                            symbol: "doc.viewfinder"
-                        )
-                    } else {
-                        CommandCenterHero(
-                            applianceCount: appliances.count,
-                            averageHealth: averageHealth,
-                            riskLoad: riskLoad,
-                            reserve: replacementReserve
-                        )
-
-                        QuickActionDock(appearanceMode: $appearanceMode)
-
-                        PremiumMetricStrip(
-                            applianceCount: appliances.count,
-                            totalValue: totalValue,
-                            replacementReserve: replacementReserve,
-                            claimWindows: claimWindowAppliances.count
-                        )
-
-                        SectionHeader(title: "Risk Radar", actionTitle: "\(criticalAppliances.count) flagged")
-
-                        if criticalAppliances.isEmpty {
-                            QuietMessage("No appliance is crossing the risk threshold.")
+                        if appliances.isEmpty {
+                            EmptyStateView(
+                                title: "Build your appliance vault",
+                                message: "Add the first appliance manually or use the invoice scan flow to prefill the essentials.",
+                                symbol: "doc.viewfinder"
+                            )
                         } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(criticalAppliances.prefix(8)) { appliance in
-                                        RiskRadarCard(appliance: appliance)
-                                    }
-                                }
-                                .padding(.horizontal, 1)
-                            }
+                            LiquidVaultHome(
+                                appliances: appliances,
+                                appearanceMode: $appearanceMode,
+                                totalValue: totalValue,
+                                replacementReserve: replacementReserve,
+                                averageHealth: averageHealth,
+                                riskLoad: riskLoad,
+                                claimWindowAppliances: claimWindowAppliances,
+                                criticalAppliances: criticalAppliances,
+                                maintenanceDue: maintenanceDue
+                            )
                         }
-
-                        PortfolioVaultVisual(appliances: appliances)
-
-                        SectionHeader(title: "Warranty Claim Windows", actionTitle: "90 days")
-
-                        if claimWindowAppliances.isEmpty {
-                            QuietMessage("No warranty expirations in the next 90 days.")
-                        } else {
-                            VStack(spacing: 10) {
-                                ForEach(claimWindowAppliances.prefix(4)) { appliance in
-                                    AlertRow(appliance: appliance)
-                                }
-                            }
-                        }
-
-                        SectionHeader(title: "Maintenance Due", actionTitle: "6 month rule")
-
-                        if maintenanceDue.isEmpty {
-                            QuietMessage("Nothing needs routine attention right now.")
-                        } else {
-                            VStack(spacing: 10) {
-                                ForEach(maintenanceDue.prefix(4)) { appliance in
-                                    MaintenanceRow(appliance: appliance)
-                                }
-                            }
-                        }
-
-                        AIInsightCard(appliances: appliances)
-                    }
                 }
                 .padding()
             }
@@ -1053,17 +1006,541 @@ struct SettingsView: View {
 
 struct AppBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(.systemBackground),
-                Color.teal.opacity(0.08),
-                Color.indigo.opacity(0.07),
-                Color(.systemBackground)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        ZStack {
+            Color(red: 0.015, green: 0.018, blue: 0.024)
+                .ignoresSafeArea()
+
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.035),
+                    Color.mint.opacity(0.08),
+                    Color.indigo.opacity(0.07),
+                    Color.black.opacity(0.18)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            TechnicalField()
+                .stroke(.white.opacity(0.045), lineWidth: 1)
+                .ignoresSafeArea()
+        }
+    }
+}
+
+struct LiquidVaultHome: View {
+    let appliances: [Appliance]
+    @Binding var appearanceMode: String
+    let totalValue: Double
+    let replacementReserve: Double
+    let averageHealth: Double
+    let riskLoad: Double
+    let claimWindowAppliances: [Appliance]
+    let criticalAppliances: [Appliance]
+    let maintenanceDue: [Appliance]
+
+    private var riskiest: Appliance? {
+        appliances.max { $0.riskScore < $1.riskScore }
+    }
+
+    private var best: Appliance? {
+        appliances.max { $0.healthScore < $1.healthScore }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VaultOperatingHeader(
+                appliances: appliances,
+                averageHealth: averageHealth,
+                riskLoad: riskLoad,
+                reserve: replacementReserve,
+                appearanceMode: $appearanceMode
+            )
+
+            BiometricInvoicePlate(appliances: appliances)
+
+            HStack(spacing: 12) {
+                CommandShard(title: "Portfolio", value: totalValue.formatted(.currency(code: currencyCode)), symbol: "shield.lefthalf.filled", tint: .mint)
+                CommandShard(title: "Claims", value: "\(claimWindowAppliances.count)", symbol: "bell.badge", tint: .orange)
+            }
+
+            AssetShelf(appliances: appliances)
+
+            HStack(spacing: 12) {
+                if let riskiest {
+                    HeroApplianceCapsule(title: "Highest Signal", appliance: riskiest, tint: riskiest.riskScore > 0.58 ? .orange : .mint)
+                }
+
+                if let best {
+                    HeroApplianceCapsule(title: "Cleanest Asset", appliance: best, tint: .cyan)
+                }
+            }
+
+            SignalMatrix(
+                criticalAppliances: criticalAppliances,
+                claimWindowAppliances: claimWindowAppliances,
+                maintenanceDue: maintenanceDue
+            )
+
+            PortfolioVaultVisual(appliances: appliances)
+        }
+    }
+}
+
+struct VaultOperatingHeader: View {
+    let appliances: [Appliance]
+    let averageHealth: Double
+    let riskLoad: Double
+    let reserve: Double
+    @Binding var appearanceMode: String
+
+    var body: some View {
+        ZStack {
+            LiquidChromeSurface()
+
+            HStack(alignment: .center, spacing: 18) {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.shield.fill")
+                        Text("VAULTIFY OS")
+                    }
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(.white.opacity(0.62))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Private Appliance Intelligence")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.68)
+                        Text("\(appliances.count) assets sealed")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.62))
+                    }
+
+                    HStack(spacing: 8) {
+                        MonoPill("HEALTH \(averageHealth.formatted(.percent.precision(.fractionLength(0))))", tint: .mint)
+                        MonoPill("RISK \(riskLoad.formatted(.percent.precision(.fractionLength(0))))", tint: .orange)
+                    }
+                }
+
+                Spacer(minLength: 4)
+
+                VStack(spacing: 12) {
+                    SpatialSeal(value: averageHealth, risk: riskLoad)
+                        .frame(width: 132, height: 132)
+
+                    Button {
+                        let current = AppAppearance(rawValue: appearanceMode) ?? .dark
+                        appearanceMode = current == .dark ? AppAppearance.light.rawValue : AppAppearance.dark.rawValue
+                    } label: {
+                        Image(systemName: "moonphase.waxing.crescent")
+                            .font(.headline.weight(.black))
+                            .frame(width: 42, height: 42)
+                            .background(.white.opacity(0.10), in: Circle())
+                            .overlay(Circle().stroke(.white.opacity(0.18), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                }
+            }
+            .padding(20)
+        }
+        .frame(minHeight: 260)
+    }
+
+    private func MonoPill(_ text: String, tint: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.black))
+            .foregroundStyle(tint)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 10)
+            .background(.white.opacity(0.08), in: Capsule())
+            .overlay(Capsule().stroke(tint.opacity(0.24), lineWidth: 1))
+    }
+}
+
+struct LiquidChromeSurface: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.02, green: 0.03, blue: 0.04),
+                            Color(red: 0.03, green: 0.10, blue: 0.10),
+                            Color(red: 0.12, green: 0.06, blue: 0.18)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.16), .clear, .white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+
+            TechnicalField()
+                .stroke(.white.opacity(0.07), lineWidth: 1)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.16), lineWidth: 1))
+        .shadow(color: .black.opacity(0.32), radius: 28, x: 0, y: 20)
+    }
+}
+
+struct TechnicalField: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let step: CGFloat = 34
+
+        stride(from: rect.minX - rect.height, through: rect.maxX, by: step).forEach { x in
+            path.move(to: CGPoint(x: x, y: rect.minY))
+            path.addLine(to: CGPoint(x: x + rect.height, y: rect.maxY))
+        }
+
+        stride(from: rect.minY, through: rect.maxY, by: step).forEach { y in
+            path.move(to: CGPoint(x: rect.minX, y: y))
+            path.addLine(to: CGPoint(x: rect.maxX, y: y + 18))
+        }
+
+        return path
+    }
+}
+
+struct SpatialSeal: View {
+    let value: Double
+    let risk: Double
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(.white.opacity(0.08 + Double(index) * 0.035), lineWidth: 1)
+                    .frame(width: 88 + CGFloat(index) * 22, height: 88 + CGFloat(index) * 22)
+                    .rotationEffect(.degrees(Double(index) * 18))
+            }
+
+            Circle()
+                .trim(from: 0.08, to: 0.08 + value * 0.78)
+                .stroke(.mint, style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                .rotationEffect(.degrees(130))
+
+            Circle()
+                .trim(from: 0.04, to: 0.04 + risk * 0.34)
+                .stroke(.orange, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-40))
+                .padding(17)
+
+            VStack(spacing: 2) {
+                Image(systemName: "seal.fill")
+                    .font(.title3.weight(.black))
+                Text(value.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.title2.weight(.black))
+            }
+            .foregroundStyle(.white)
+        }
+    }
+}
+
+struct BiometricInvoicePlate: View {
+    let appliances: [Appliance]
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(.black.opacity(0.42))
+                    .frame(width: 116, height: 142)
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.mint.opacity(0.28), lineWidth: 1))
+
+                ViewfinderGlyph()
+                    .stroke(.mint.opacity(0.86), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+                    .frame(width: 78, height: 104)
+
+                VStack(spacing: 7) {
+                    Capsule().fill(.white.opacity(0.58)).frame(width: 45, height: 4)
+                    Capsule().fill(.white.opacity(0.27)).frame(width: 62, height: 4)
+                    Capsule().fill(.white.opacity(0.18)).frame(width: 34, height: 4)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("BILL SCAN")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(.mint)
+                    Spacer()
+                    Text("LIVE")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(.black)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 7)
+                        .background(.mint, in: Capsule())
+                }
+
+                Text("Drop an invoice. Vaultify builds the appliance passport.")
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    SignalPip(title: "MODEL", value: 0.94)
+                    SignalPip(title: "DATE", value: 0.91)
+                    SignalPip(title: "WARRANTY", value: 0.88)
+                }
+            }
+        }
+        .padding()
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
+    }
+}
+
+struct ViewfinderGlyph: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let length = min(rect.width, rect.height) * 0.24
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + length))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + length, y: rect.minY))
+
+        path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
+
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
+
+        path.move(to: CGPoint(x: rect.minX + length, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))
+
+        path.move(to: CGPoint(x: rect.minX + 8, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX - 8, y: rect.midY))
+
+        return path
+    }
+}
+
+struct SignalPip: View {
+    let title: String
+    let value: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(.white.opacity(0.48))
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.10))
+                    Capsule()
+                        .fill(.mint)
+                        .frame(width: proxy.size.width * value)
+                }
+            }
+            .frame(height: 5)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct CommandShard: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: symbol)
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(tint)
+                Spacer()
+                Capsule()
+                    .fill(tint.opacity(0.42))
+                    .frame(width: 30, height: 5)
+            }
+
+            Text(value)
+                .font(.system(.title3, design: .rounded, weight: .black))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.58)
+            Text(title.uppercased())
+                .font(.caption2.weight(.heavy))
+                .foregroundStyle(.white.opacity(0.46))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(tint.opacity(0.20), lineWidth: 1))
+    }
+}
+
+struct AssetShelf: View {
+    let appliances: [Appliance]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("ASSET SHELF")
+                .font(.caption2.weight(.black))
+                .foregroundStyle(.white.opacity(0.48))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(appliances.prefix(10)) { appliance in
+                        FloatingAssetTile(appliance: appliance)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct FloatingAssetTile: View {
+    let appliance: Appliance
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(tileTint.opacity(0.16))
+                    Image(systemName: appliance.category.symbol)
+                        .font(.title2.weight(.black))
+                        .foregroundStyle(tileTint)
+                }
+                .frame(width: 56, height: 56)
+
+                Spacer()
+
+                Text(appliance.healthScore.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.caption.weight(.black))
+                    .foregroundStyle(.white.opacity(0.70))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appliance.name)
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                Text(appliance.lifecycleStage)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(tileTint)
+            }
+
+            RiskBlade(value: appliance.riskScore, tint: tileTint)
+        }
+        .padding()
+        .frame(width: 174, height: 184)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
+    }
+
+    private var tileTint: Color {
+        appliance.riskScore > 0.62 ? .orange : appliance.healthScore > 0.70 ? .mint : .cyan
+    }
+}
+
+struct RiskBlade: View {
+    let value: Double
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(.white.opacity(0.10))
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(tint)
+                    .frame(width: proxy.size.width * max(0.05, min(1, value)))
+            }
+        }
+        .frame(height: 7)
+    }
+}
+
+struct HeroApplianceCapsule: View {
+    let title: String
+    let appliance: Appliance
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.black))
+                .foregroundStyle(.white.opacity(0.46))
+            Text(appliance.name)
+                .font(.subheadline.weight(.heavy))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+            HStack {
+                Image(systemName: appliance.category.symbol)
+                Text(appliance.riskScore.formatted(.percent.precision(.fractionLength(0))))
+                Spacer()
+                Text(appliance.replacementBudgetTarget, format: .currency(code: currencyCode))
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(tint)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 128, alignment: .leading)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(tint.opacity(0.20), lineWidth: 1))
+    }
+}
+
+struct SignalMatrix: View {
+    let criticalAppliances: [Appliance]
+    let claimWindowAppliances: [Appliance]
+    let maintenanceDue: [Appliance]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            MatrixCell(title: "RISK", count: criticalAppliances.count, tint: .orange)
+            MatrixCell(title: "CLAIM", count: claimWindowAppliances.count, tint: .mint)
+            MatrixCell(title: "SERVICE", count: maintenanceDue.count, tint: .cyan)
+        }
+    }
+}
+
+struct MatrixCell: View {
+    let title: String
+    let count: Int
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("\(count)")
+                .font(.system(.title, design: .rounded, weight: .black))
+                .foregroundStyle(.white)
+            Text(title)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(tint)
+            HStack(spacing: 3) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule()
+                        .fill(index < min(count, 5) ? tint : .white.opacity(0.12))
+                        .frame(width: 10, height: 4)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 1))
     }
 }
 
