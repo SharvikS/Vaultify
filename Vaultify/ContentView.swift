@@ -5,7 +5,6 @@
 //  Created by Sharvik Sutar on 27/06/26.
 //
 
-import Charts
 import SwiftData
 import SwiftUI
 
@@ -205,7 +204,7 @@ struct DashboardView: View {
 
                         QuickActionDock(appearanceMode: $appearanceMode)
 
-                        SummaryGrid(
+                        PremiumMetricStrip(
                             applianceCount: appliances.count,
                             totalValue: totalValue,
                             replacementReserve: replacementReserve,
@@ -227,7 +226,7 @@ struct DashboardView: View {
                             }
                         }
 
-                        DashboardCharts(appliances: appliances)
+                        PortfolioVaultVisual(appliances: appliances)
 
                         SectionHeader(title: "Warranty Claim Windows", actionTitle: "90 days")
 
@@ -587,15 +586,9 @@ struct AddApplianceView: View {
         NavigationStack {
             Form {
                 Section {
-                    Button {
+                    PremiumScanIntakeCard {
                         applyDemoExtraction()
-                    } label: {
-                        Label("Scan Bill or Invoice", systemImage: "doc.viewfinder")
                     }
-
-                    Text("This prefill flow is wired as a placeholder. Camera capture, PDF import, OCR, and AI extraction can attach here without changing the rest of the model.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
 
                 Section("Appliance") {
@@ -826,13 +819,13 @@ struct ForecastView: View {
 
                 List {
                     Section {
-                        ForecastOverviewCard(appliances: appliances)
+                        ReplacementHorizonHero(appliances: appliances)
                             .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                             .listRowBackground(Color.clear)
                     }
 
                     Section("Budget Planner") {
-                        ReplacementBudgetChart(appliances: appliances)
+                        ReplacementHorizonVisual(appliances: appliances)
                             .frame(height: 220)
                     }
 
@@ -902,7 +895,7 @@ struct ReportsView: View {
         NavigationStack {
             List {
                 Section {
-                    ReportReadinessCard(appliances: appliances, totalInsuredValue: totalInsuredValue)
+                    PremiumReportReadinessCard(appliances: appliances, totalInsuredValue: totalInsuredValue)
                         .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                         .listRowBackground(Color.clear)
                 }
@@ -1081,36 +1074,175 @@ struct CommandCenterHero: View {
     let reserve: Double
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Home Systems Command")
-                        .font(.largeTitle.bold())
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
-                    Text("\(applianceCount) assets monitored across warranty, lifecycle, service, budget, resale, and sustainability.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+        ZStack {
+            PremiumMesh()
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "lock.shield")
+                        Text("VAULTIFY")
+                    }
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(.white.opacity(0.72))
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Appliance Vault")
+                            .font(.system(size: 34, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                        Text("\(applianceCount) protected assets")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.white.opacity(0.76))
+                    }
+
+                    HStack(spacing: 8) {
+                        PremiumCapsuleMetric(title: "Risk", value: riskLoad.formatted(.percent.precision(.fractionLength(0))), symbol: "waveform.path.ecg")
+                        PremiumCapsuleMetric(title: "Reserve", value: reserve.formatted(.currency(code: currencyCode)), symbol: "banknote")
+                    }
                 }
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 6)
 
-                HealthOrbit(value: averageHealth, title: "Health")
-                    .frame(width: 96, height: 96)
+                VaultDial(value: averageHealth, risk: riskLoad)
+                    .frame(width: 124, height: 124)
             }
-
-            HStack(spacing: 10) {
-                HeroMicroMetric(title: "Risk load", value: riskLoad.formatted(.percent.precision(.fractionLength(0))), symbol: "waveform.path.ecg", tint: .orange)
-                HeroMicroMetric(title: "Reserve", value: reserve.formatted(.currency(code: currencyCode)), symbol: "banknote", tint: .green)
-            }
+            .padding(20)
         }
-        .padding(18)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(minHeight: 210)
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(.white.opacity(0.14), lineWidth: 1)
+                .stroke(.white.opacity(0.20), lineWidth: 1)
         )
+        .shadow(color: .teal.opacity(0.24), radius: 24, x: 0, y: 14)
+    }
+}
+
+struct PremiumMesh: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.03, green: 0.09, blue: 0.11),
+                    Color(red: 0.04, green: 0.27, blue: 0.28),
+                    Color(red: 0.28, green: 0.12, blue: 0.38)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [.teal.opacity(0.72), .clear],
+                center: .topTrailing,
+                startRadius: 6,
+                endRadius: 230
+            )
+
+            RadialGradient(
+                colors: [.orange.opacity(0.42), .clear],
+                center: .bottomLeading,
+                startRadius: 4,
+                endRadius: 250
+            )
+
+            PremiumGrid()
+                .stroke(.white.opacity(0.06), lineWidth: 1)
+        }
+    }
+}
+
+struct PremiumGrid: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let spacing: CGFloat = 28
+
+        stride(from: rect.minX, through: rect.maxX, by: spacing).forEach { x in
+            path.move(to: CGPoint(x: x, y: rect.minY))
+            path.addLine(to: CGPoint(x: x + 42, y: rect.maxY))
+        }
+
+        stride(from: rect.minY, through: rect.maxY, by: spacing).forEach { y in
+            path.move(to: CGPoint(x: rect.minX, y: y))
+            path.addLine(to: CGPoint(x: rect.maxX, y: y - 18))
+        }
+
+        return path
+    }
+}
+
+struct PremiumCapsuleMetric: View {
+    let title: String
+    let value: String
+    let symbol: String
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.caption.weight(.heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .opacity(0.68)
+            }
+        } icon: {
+            Image(systemName: symbol)
+                .font(.caption.weight(.bold))
+        }
+        .foregroundStyle(.white)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(.white.opacity(0.13), in: Capsule())
+        .overlay(Capsule().stroke(.white.opacity(0.20), lineWidth: 1))
+    }
+}
+
+struct VaultDial: View {
+    let value: Double
+    let risk: Double
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<36, id: \.self) { index in
+                Capsule()
+                    .fill(index.isMultiple(of: 3) ? Color.white.opacity(0.52) : Color.white.opacity(0.18))
+                    .frame(width: 3, height: index.isMultiple(of: 3) ? 12 : 7)
+                    .offset(y: -58)
+                    .rotationEffect(.degrees(Double(index) * 10))
+            }
+
+            Circle()
+                .stroke(.white.opacity(0.13), lineWidth: 14)
+
+            Circle()
+                .trim(from: 0, to: value)
+                .stroke(
+                    AngularGradient(colors: [.cyan, .teal, .green, .yellow], center: .center),
+                    style: StrokeStyle(lineWidth: 14, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            Circle()
+                .trim(from: 0, to: risk)
+                .stroke(
+                    AngularGradient(colors: [.clear, .orange, .red], center: .center),
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                )
+                .rotationEffect(.degrees(140))
+                .padding(20)
+
+            VStack(spacing: 2) {
+                Image(systemName: "shield.checkered")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white.opacity(0.88))
+                Text(value.formatted(.percent.precision(.fractionLength(0))))
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 
@@ -1212,7 +1344,7 @@ struct QuickActionButton: View {
     }
 }
 
-struct DashboardCharts: View {
+struct PortfolioVaultVisual: View {
     let appliances: [Appliance]
 
     private var categoryMetrics: [CategoryMetric] {
@@ -1227,27 +1359,29 @@ struct DashboardCharts: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Portfolio Mix", actionTitle: "replacement value")
+            SectionHeader(title: "Asset Constellation", actionTitle: "live portfolio")
 
-            Chart(categoryMetrics) { metric in
-                BarMark(
-                    x: .value("Category", metric.category),
-                    y: .value("Value", metric.value)
-                )
-                .foregroundStyle(by: .value("Category", metric.category))
-                .cornerRadius(5)
+            VStack(spacing: 16) {
+                ApplianceConstellation(appliances: appliances)
+                    .frame(height: 230)
 
-                PointMark(
-                    x: .value("Category", metric.category),
-                    y: .value("Value", metric.value * max(0.08, metric.risk))
-                )
-                .foregroundStyle(.orange)
+                VStack(spacing: 10) {
+                    ForEach(categoryMetrics.prefix(5)) { metric in
+                        CategoryValueTrack(metric: metric, maxValue: maxCategoryValue)
+                    }
+                }
             }
-            .chartLegend(.hidden)
-            .frame(height: 190)
             .padding()
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(.white.opacity(0.14), lineWidth: 1)
+            )
         }
+    }
+
+    private var maxCategoryValue: Double {
+        max(1, categoryMetrics.map(\.value).max() ?? 1)
     }
 }
 
@@ -1256,6 +1390,125 @@ struct CategoryMetric: Identifiable {
     let category: String
     let value: Double
     let risk: Double
+}
+
+struct ApplianceConstellation: View {
+    let appliances: [Appliance]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
+            let radius = min(proxy.size.width, proxy.size.height) * 0.34
+
+            ZStack {
+                ForEach(0..<4, id: \.self) { index in
+                    Circle()
+                        .stroke(.teal.opacity(0.10 + Double(index) * 0.04), lineWidth: 1)
+                        .frame(width: radius * CGFloat(index + 2), height: radius * CGFloat(index + 2))
+                }
+
+                ForEach(Array(appliances.prefix(12).enumerated()), id: \.element.id) { index, appliance in
+                    let angle = (Double(index) / Double(max(1, min(appliances.count, 12)))) * .pi * 2 - .pi / 2
+                    let distance = radius * (0.58 + CGFloat(appliance.riskScore) * 0.75)
+                    let point = CGPoint(
+                        x: center.x + cos(angle) * distance,
+                        y: center.y + sin(angle) * distance
+                    )
+
+                    Path { path in
+                        path.move(to: center)
+                        path.addLine(to: point)
+                    }
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+
+                    AssetNode(appliance: appliance)
+                        .position(point)
+                }
+
+                ZStack {
+                    Circle()
+                        .fill(.teal.opacity(0.18))
+                        .frame(width: 86, height: 86)
+                    Circle()
+                        .fill(.regularMaterial)
+                        .frame(width: 68, height: 68)
+                    Image(systemName: "lock.shield")
+                        .font(.title.weight(.black))
+                        .foregroundStyle(.teal)
+                }
+                .position(center)
+            }
+        }
+    }
+}
+
+struct AssetNode: View {
+    let appliance: Appliance
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(nodeTint.opacity(0.18))
+                .frame(width: nodeSize + 16, height: nodeSize + 16)
+            Circle()
+                .fill(.regularMaterial)
+                .frame(width: nodeSize, height: nodeSize)
+                .overlay(Circle().stroke(nodeTint.opacity(0.76), lineWidth: 2))
+            Image(systemName: appliance.category.symbol)
+                .font(.caption.weight(.heavy))
+                .foregroundStyle(nodeTint)
+        }
+        .shadow(color: nodeTint.opacity(0.25), radius: 9, x: 0, y: 5)
+    }
+
+    private var nodeTint: Color {
+        appliance.riskScore > 0.65 ? .red : appliance.riskScore > 0.38 ? .orange : .teal
+    }
+
+    private var nodeSize: CGFloat {
+        30 + CGFloat(min(1, appliance.replacementBudgetTarget / 4000)) * 18
+    }
+}
+
+struct CategoryValueTrack: View {
+    let metric: CategoryMetric
+    let maxValue: Double
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(metric.category)
+                .font(.caption.weight(.semibold))
+                .frame(width: 82, alignment: .leading)
+                .lineLimit(1)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.white.opacity(0.08))
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.teal, metric.risk > 0.45 ? .orange : .green],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: proxy.size.width * max(0.06, metric.value / maxValue))
+                    Circle()
+                        .fill(metric.risk > 0.45 ? .orange : .teal)
+                        .frame(width: 11, height: 11)
+                        .offset(x: proxy.size.width * max(0.06, metric.value / maxValue) - 6)
+                }
+            }
+            .frame(height: 12)
+
+            Text(metric.value, format: .currency(code: currencyCode))
+                .font(.caption2.weight(.bold))
+                .frame(width: 72, alignment: .trailing)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+    }
 }
 
 struct RiskRadarCard: View {
@@ -1384,6 +1637,81 @@ struct InventoryControlPanel: View {
     }
 }
 
+struct PremiumScanIntakeCard: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Label("Invoice Capture", systemImage: "viewfinder")
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(.teal)
+                        Text("AI Intake")
+                            .font(.system(.title2, design: .rounded, weight: .black))
+                        Text("Brand, model, serial, price, warranty and purchase date.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(.black.opacity(0.72))
+                            .frame(width: 92, height: 118)
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(.teal.opacity(0.88), style: StrokeStyle(lineWidth: 2, dash: [9, 5]))
+                            .frame(width: 68, height: 88)
+                        VStack(spacing: 6) {
+                            Capsule().fill(.white.opacity(0.62)).frame(width: 42, height: 4)
+                            Capsule().fill(.white.opacity(0.34)).frame(width: 54, height: 4)
+                            Capsule().fill(.white.opacity(0.22)).frame(width: 34, height: 4)
+                        }
+                    }
+                    .shadow(color: .teal.opacity(0.28), radius: 14, x: 0, y: 8)
+                }
+
+                HStack(spacing: 8) {
+                    ExtractionChip(title: "Model", value: 0.94)
+                    ExtractionChip(title: "Warranty", value: 0.88)
+                    ExtractionChip(title: "Price", value: 0.97)
+                }
+            }
+            .padding()
+            .background(
+                LinearGradient(
+                    colors: [Color.teal.opacity(0.14), Color(.secondarySystemGroupedBackground), Color.purple.opacity(0.08)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            )
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.teal.opacity(0.20), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ExtractionChip: View {
+    let title: String
+    let value: Double
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.heavy))
+            ProgressView(value: value)
+                .tint(.teal)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
 struct CategoryChip: View {
     let title: String
     let symbol: String
@@ -1407,13 +1735,27 @@ struct AdvancedApplianceRow: View {
     let appliance: Appliance
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                SymbolBadge(symbol: appliance.category.symbol, tint: rowTint)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [rowTint.opacity(0.26), Color(.secondarySystemGroupedBackground)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: appliance.category.symbol)
+                        .font(.title3.weight(.black))
+                        .foregroundStyle(rowTint)
+                }
+                .frame(width: 50, height: 50)
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(rowTint.opacity(0.24), lineWidth: 1))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(appliance.name)
-                        .font(.headline)
+                        .font(.headline.weight(.bold))
                     Text("\(appliance.displayBrand) · \(appliance.modelNumber.isEmpty ? appliance.category.title : appliance.modelNumber)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -1422,9 +1764,12 @@ struct AdvancedApplianceRow: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text(appliance.lifecycleStage)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(rowTint)
+                    Text(appliance.lifecycleStage.uppercased())
+                        .font(.caption2.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 7)
+                        .background(rowTint, in: Capsule())
                     Text(appliance.replacementBudgetTarget, format: .currency(code: currencyCode))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1432,12 +1777,12 @@ struct AdvancedApplianceRow: View {
             }
 
             HStack(spacing: 8) {
-                MiniProgress(title: "Health", value: appliance.healthScore, tint: .green)
-                MiniProgress(title: "Risk", value: appliance.riskScore, tint: rowTint)
-                MiniProgress(title: "Warranty", value: warrantyProgress, tint: .blue)
+                PremiumMiniMeter(title: "H", value: appliance.healthScore, tint: .green)
+                PremiumMiniMeter(title: "R", value: appliance.riskScore, tint: rowTint)
+                PremiumMiniMeter(title: "W", value: warrantyProgress, tint: .blue)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 10)
     }
 
     private var rowTint: Color {
@@ -1447,6 +1792,34 @@ struct AdvancedApplianceRow: View {
     private var warrantyProgress: Double {
         guard let days = appliance.daysUntilWarrantyExpires else { return 0 }
         return max(0, min(1, Double(days) / 365))
+    }
+}
+
+struct PremiumMiniMeter: View {
+    let title: String
+    let value: Double
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Text(title)
+                .font(.caption2.weight(.black))
+                .foregroundStyle(tint)
+                .frame(width: 15)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.secondary.opacity(0.12))
+                    Capsule()
+                        .fill(tint.gradient)
+                        .frame(width: proxy.size.width * max(0.04, min(1, value)))
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 8)
+        .background(.thinMaterial, in: Capsule())
     }
 }
 
@@ -1534,7 +1907,7 @@ struct TimelineStep: View {
     }
 }
 
-struct ForecastOverviewCard: View {
+struct ReplacementHorizonHero: View {
     let appliances: [Appliance]
 
     private var urgentCount: Int {
@@ -1549,27 +1922,37 @@ struct ForecastOverviewCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Replacement Forecast", systemImage: "calendar.badge.clock")
-                .font(.headline)
-            HStack(spacing: 12) {
-                GaugeCard(title: "Urgent", value: appliances.isEmpty ? 0 : Double(urgentCount) / Double(appliances.count), symbol: "exclamationmark.triangle", tint: .orange)
-                VStack(alignment: .leading, spacing: 8) {
+        ZStack {
+            PremiumMesh()
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            HStack(spacing: 16) {
+                VaultDial(value: appliances.isEmpty ? 0 : 1 - Double(urgentCount) / Double(appliances.count), risk: appliances.isEmpty ? 0 : Double(urgentCount) / Double(appliances.count))
+                    .frame(width: 104, height: 104)
+
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("Replacement Horizon")
+                        .font(.title2.weight(.black))
+                        .foregroundStyle(.white)
                     Text(fiveYearBudget, format: .currency(code: currencyCode))
-                        .font(.title2.bold())
-                    Text("Projected five-year replacement exposure")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(.title, design: .rounded, weight: .black))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                    Text("\(urgentCount) near-term asset\(urgentCount == 1 ? "" : "s")")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.76))
                 }
                 Spacer()
             }
+            .padding(18)
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .frame(minHeight: 150)
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.18), lineWidth: 1))
     }
 }
 
-struct ReplacementBudgetChart: View {
+struct ReplacementHorizonVisual: View {
     let appliances: [Appliance]
 
     private var points: [MonthlyBudgetPoint] {
@@ -1583,20 +1966,53 @@ struct ReplacementBudgetChart: View {
     }
 
     var body: some View {
-        Chart(points) { point in
-            BarMark(
-                x: .value("Year", point.year),
-                y: .value("Budget", point.amount)
-            )
-            .foregroundStyle(.teal.gradient)
-            .cornerRadius(5)
+        GeometryReader { proxy in
+            let maxAmount = max(1, points.map(\.amount).max() ?? 1)
+            let columnWidth = proxy.size.width / CGFloat(max(points.count, 1))
 
-            LineMark(
-                x: .value("Year", point.year),
-                y: .value("Budget", point.amount)
-            )
-            .foregroundStyle(.orange)
-            .symbol(.circle)
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(.ultraThinMaterial)
+
+                ForEach(Array(points.enumerated()), id: \.element.id) { index, point in
+                    let normalized = point.amount / maxAmount
+                    VStack(spacing: 8) {
+                        Spacer()
+
+                        ZStack(alignment: .bottom) {
+                            Capsule()
+                                .fill(.white.opacity(0.08))
+                                .frame(width: 28, height: 126)
+
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: point.amount > 0 ? [.orange, .teal] : [.secondary.opacity(0.18), .secondary.opacity(0.10)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .frame(width: 28, height: 18 + (108 * normalized))
+                                .shadow(color: point.amount > 0 ? .teal.opacity(0.28) : .clear, radius: 10)
+                        }
+
+                        Text(point.year)
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(width: columnWidth)
+                    .position(x: columnWidth * CGFloat(index) + columnWidth / 2, y: proxy.size.height / 2)
+                    .overlay(alignment: .top) {
+                        if point.amount > 0 {
+                            Text(point.amount, format: .currency(code: currencyCode))
+                                .font(.caption2.weight(.heavy))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.55)
+                                .offset(y: 8)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1607,7 +2023,7 @@ struct MonthlyBudgetPoint: Identifiable {
     let amount: Double
 }
 
-struct ReportReadinessCard: View {
+struct PremiumReportReadinessCard: View {
     let appliances: [Appliance]
     let totalInsuredValue: Double
 
@@ -1618,27 +2034,111 @@ struct ReportReadinessCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(.secondarySystemGroupedBackground),
+                            Color.teal.opacity(0.10),
+                            Color.purple.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Export Readiness")
-                        .font(.title3.bold())
-                    Text("Insurance, handover, rental, and claim packs.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Label("Dossier Builder", systemImage: "doc.badge.gearshape")
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(.teal)
+
+                    Text(totalInsuredValue, format: .currency(code: currencyCode))
+                        .font(.system(.title, design: .rounded, weight: .black))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+
+                    HStack(spacing: 8) {
+                        DossierStamp(title: "Docs", value: documentCoverage)
+                        DossierStamp(title: "Serials", value: serialCoverage)
+                        DossierStamp(title: "Warranty", value: warrantyCoverage)
+                    }
                 }
+
                 Spacer()
-                HealthOrbit(value: documentCoverage, title: "Docs")
-                    .frame(width: 78, height: 78)
+
+                DocumentStackVisual(coverage: documentCoverage)
+                    .frame(width: 96, height: 118)
+            }
+            .padding()
+        }
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.14), lineWidth: 1))
+    }
+
+    private var serialCoverage: Double {
+        guard !appliances.isEmpty else { return 0 }
+        return Double(appliances.filter { !$0.serialNumber.isEmpty }.count) / Double(appliances.count)
+    }
+
+    private var warrantyCoverage: Double {
+        guard !appliances.isEmpty else { return 0 }
+        return Double(appliances.filter { !$0.warranties.isEmpty }.count) / Double(appliances.count)
+    }
+}
+
+struct DossierStamp: View {
+    let title: String
+    let value: Double
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value.formatted(.percent.precision(.fractionLength(0))))
+                .font(.caption.weight(.black))
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 58, height: 42)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+struct DocumentStackVisual: View {
+    let coverage: Double
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<4, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(index == 0 ? Color.teal.opacity(0.22) : Color.white.opacity(0.16))
+                    .overlay(
+                        VStack(alignment: .leading, spacing: 7) {
+                            Capsule().fill(.white.opacity(0.45)).frame(width: 42, height: 4)
+                            Capsule().fill(.white.opacity(0.22)).frame(width: 58, height: 4)
+                            Capsule().fill(.white.opacity(0.22)).frame(width: 34, height: 4)
+                            Spacer()
+                            HStack {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(.teal)
+                                Spacer()
+                            }
+                        }
+                        .padding(10)
+                    )
+                    .frame(width: 76, height: 98)
+                    .rotationEffect(.degrees(Double(index - 1) * 5))
+                    .offset(x: CGFloat(index - 1) * 9, y: CGFloat(index) * -3)
             }
 
-            HStack(spacing: 10) {
-                HeroMicroMetric(title: "Contents", value: totalInsuredValue.formatted(.currency(code: currencyCode)), symbol: "shield", tint: .blue)
-                HeroMicroMetric(title: "Serials", value: "\(appliances.filter { !$0.serialNumber.isEmpty }.count)", symbol: "barcode", tint: .purple)
-            }
+            Text(coverage.formatted(.percent.precision(.fractionLength(0))))
+                .font(.caption.weight(.black))
+                .padding(.vertical, 5)
+                .padding(.horizontal, 8)
+                .background(.black.opacity(0.32), in: Capsule())
+                .foregroundStyle(.white)
+                .offset(y: 45)
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -1785,19 +2285,58 @@ struct SettingsModuleRow: View {
     }
 }
 
-struct SummaryGrid: View {
+struct PremiumMetricStrip: View {
     let applianceCount: Int
     let totalValue: Double
     let replacementReserve: Double
     let claimWindows: Int
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            SummaryTile(title: "Appliances", value: "\(applianceCount)", symbol: "house.and.flag", tint: .teal)
-            SummaryTile(title: "Insurance Value", value: totalValue.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")), symbol: "shield", tint: .blue)
-            SummaryTile(title: "Reserve Target", value: replacementReserve.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")), symbol: "creditcard", tint: .green)
-            SummaryTile(title: "Claim Windows", value: "\(claimWindows)", symbol: "bell.badge", tint: .orange)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                PremiumStatTile(title: "Assets", value: "\(applianceCount)", symbol: "house.and.flag", tint: .teal)
+                PremiumStatTile(title: "Covered Value", value: totalValue.formatted(.currency(code: currencyCode)), symbol: "shield.lefthalf.filled", tint: .blue)
+                PremiumStatTile(title: "Reserve", value: replacementReserve.formatted(.currency(code: currencyCode)), symbol: "banknote", tint: .green)
+                PremiumStatTile(title: "Claims", value: "\(claimWindows)", symbol: "bell.badge", tint: .orange)
+            }
         }
+    }
+}
+
+struct PremiumStatTile: View {
+    let title: String
+    let value: String
+    let symbol: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                SymbolBadge(symbol: symbol, tint: tint)
+                Spacer()
+                Circle()
+                    .fill(tint.opacity(0.22))
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(tint.opacity(0.65), lineWidth: 1))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(value)
+                    .font(.system(.title3, design: .rounded, weight: .black))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.62)
+                Text(title.uppercased())
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 154, height: 118, alignment: .leading)
+        .padding()
+        .background(
+            LinearGradient(colors: [tint.opacity(0.16), Color(.secondarySystemGroupedBackground)], startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(tint.opacity(0.20), lineWidth: 1))
     }
 }
 
