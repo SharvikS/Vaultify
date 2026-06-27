@@ -106,6 +106,16 @@ enum ApplianceStatus {
         case .planReplacement: "creditcard"
         }
     }
+
+    var tintName: String {
+        switch self {
+        case .protected: "green"
+        case .inspectSoon: "orange"
+        case .warrantyExpired: "gray"
+        case .aging: "yellow"
+        case .planReplacement: "red"
+        }
+    }
 }
 
 @Model
@@ -313,6 +323,64 @@ extension Appliance {
     var shouldReviewRepairVsReplace: Bool {
         repairRatio >= 0.4
     }
+
+    var riskScore: Double {
+        let ageRisk = 1 - healthScore
+        let repairRisk = min(1, repairRatio)
+        let warrantyRisk = activeWarranties.isEmpty ? 0.18 : 0
+        let claimWindowRisk = (daysUntilWarrantyExpires ?? 999) <= 90 ? 0.14 : 0
+        return min(1, (ageRisk * 0.58) + (repairRisk * 0.28) + warrantyRisk + claimWindowRisk)
+    }
+
+    var reliabilityScore: Double {
+        let brandSeed = Double(abs(brand.lowercased().unicodeScalars.reduce(0) { $0 + Int($1.value) }) % 18)
+        let base = 0.86 - (brandSeed / 100)
+        return max(0.48, min(0.96, base - (repairRatio * 0.18)))
+    }
+
+    var sustainabilityScore: Double {
+        let agePenalty = min(0.48, ageInYears / 40)
+        let repairPenalty = min(0.18, repairRatio * 0.12)
+        return max(0.28, min(0.98, 0.92 - agePenalty - repairPenalty))
+    }
+
+    var estimatedResaleValue: Double {
+        replacementBudgetTarget * max(0.04, min(0.52, healthScore * reliabilityScore * 0.58))
+    }
+
+    var monthlyReplacementSavingsTarget: Double {
+        let monthsRemaining = max(1, yearsRemaining * 12)
+        return replacementBudgetTarget / monthsRemaining
+    }
+
+    var lifecycleStage: String {
+        switch healthScore {
+        case 0.76...1: "Prime"
+        case 0.51..<0.76: "Watch"
+        case 0.26..<0.51: "Aging"
+        default: "Replace"
+        }
+    }
+
+    var nextMaintenanceDate: Date {
+        let latestServiceDate = serviceLogs.map(\.serviceDate).max() ?? purchaseDate
+        return Calendar.current.date(byAdding: .month, value: category.maintenanceCadenceMonths, to: latestServiceDate) ?? latestServiceDate
+    }
+}
+
+extension ApplianceCategory {
+    var maintenanceCadenceMonths: Int {
+        switch self {
+        case .kitchen: 6
+        case .laundry: 4
+        case .hvac: 3
+        case .electronics: 12
+        case .plumbing: 6
+        case .cleaning: 3
+        case .outdoor: 6
+        case .other: 6
+        }
+    }
 }
 
 extension WarrantyRecord {
@@ -344,4 +412,3 @@ extension WarrantyRecord {
         return "Active"
     }
 }
-
