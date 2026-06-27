@@ -12,7 +12,9 @@ import SwiftData
 struct VaultifyApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Appliance.self,
+            WarrantyRecord.self,
+            ServiceLog.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
