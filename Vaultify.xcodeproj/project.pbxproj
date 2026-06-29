@@ -7,19 +7,32 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vaultify.app; sourceTree = BUILT_PRODUCTS_DIR; };
+	B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vaultify.app; sourceTree = BUILT_PRODUCTS_DIR; };
+	B99100012FF2100000000001 /* VaultifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VaultifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B980EEA02FEFFAF000E3BC21 /* Vaultify */ = {
+	B980EEA02FEFFAF000E3BC21 /* Vaultify */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Vaultify;
+			sourceTree = "<group>";
+		};
+	B99100022FF2100000000001 /* VaultifyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = VaultifyTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		B980EE9B2FEFFAF000E3BC21 /* Frameworks */ = {
+	B980EE9B2FEFFAF000E3BC21 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+	B99100032FF2100000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +46,7 @@
 			isa = PBXGroup;
 			children = (
 				B980EEA02FEFFAF000E3BC21 /* Vaultify */,
+				B99100022FF2100000000001 /* VaultifyTests */,
 				B980EE9F2FEFFAF000E3BC21 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,14 +55,25 @@
 			isa = PBXGroup;
 			children = (
 				B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */,
+				B99100012FF2100000000001 /* VaultifyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
+/* Begin PBXContainerItemProxy section */
+	B991000A2FF2100000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B980EE962FEFFAF000E3BC21 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B980EE9D2FEFFAF000E3BC21;
+			remoteInfo = Vaultify;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXNativeTarget section */
-		B980EE9D2FEFFAF000E3BC21 /* Vaultify */ = {
+	B980EE9D2FEFFAF000E3BC21 /* Vaultify */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B980EEAB2FEFFAF100E3BC21 /* Build configuration list for PBXNativeTarget "Vaultify" */;
 			buildPhases = (
@@ -70,6 +95,29 @@
 			productReference = B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */;
 			productType = "com.apple.product-type.application";
 		};
+	B99100072FF2100000000001 /* VaultifyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B991000D2FF2100000000001 /* Build configuration list for PBXNativeTarget "VaultifyTests" */;
+			buildPhases = (
+				B99100042FF2100000000001 /* Sources */,
+				B99100032FF2100000000001 /* Frameworks */,
+				B99100052FF2100000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B991000B2FF2100000000001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B99100022FF2100000000001 /* VaultifyTests */,
+			);
+			name = VaultifyTests;
+			packageProductDependencies = (
+			);
+			productName = VaultifyTests;
+			productReference = B99100012FF2100000000001 /* VaultifyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					B980EE9D2FEFFAF000E3BC21 = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					B99100072FF2100000000001 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = B980EE9D2FEFFAF000E3BC21;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				B980EE9D2FEFFAF000E3BC21 /* Vaultify */,
+				B99100072FF2100000000001 /* VaultifyTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		B980EE9C2FEFFAF000E3BC21 /* Resources */ = {
+	B980EE9C2FEFFAF000E3BC21 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+	B99100052FF2100000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,7 +175,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		B980EE9A2FEFFAF000E3BC21 /* Sources */ = {
+	B980EE9A2FEFFAF000E3BC21 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+	B99100042FF2100000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -123,6 +190,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+	B991000B2FF2100000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B980EE9D2FEFFAF000E3BC21 /* Vaultify */;
+			targetProxy = B991000A2FF2100000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B980EEA92FEFFAF100E3BC21 /* Debug */ = {
@@ -256,6 +331,7 @@
 				DEVELOPMENT_TEAM = H6YXDD974V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Vaultify uses the camera to scan appliance invoices and auto-fill their details.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -270,12 +346,12 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -290,6 +366,7 @@
 				DEVELOPMENT_TEAM = H6YXDD974V;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Vaultify uses the camera to scan appliance invoices and auto-fill their details.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -304,13 +381,69 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				SUPPORTS_MACCATALYST = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+	B991000E2FF2100000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H6YXDD974V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = con.sharvik.VaultifyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vaultify.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vaultify";
+			};
+			name = Debug;
+		};
+	B991000F2FF2100000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = H6YXDD974V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = con.sharvik.VaultifyTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vaultify.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vaultify";
 			};
 			name = Release;
 		};
@@ -331,6 +464,15 @@
 			buildConfigurations = (
 				B980EEAC2FEFFAF100E3BC21 /* Debug */,
 				B980EEAD2FEFFAF100E3BC21 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+	B991000D2FF2100000000001 /* Build configuration list for PBXNativeTarget "VaultifyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B991000E2FF2100000000001 /* Debug */,
+				B991000F2FF2100000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
