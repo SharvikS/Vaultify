@@ -374,10 +374,13 @@ struct PortfolioHero: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack(alignment: .center, spacing: 18) {
+            HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 8) {
                         Eyebrow("Protected value", tint: VaultTheme.accent)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .fixedSize()
                         Image(systemName: expanded ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
                             .font(.caption.weight(.black))
                             .foregroundStyle(.white.opacity(0.35))
@@ -391,14 +394,15 @@ struct PortfolioHero: View {
                     Text("\(count) sealed asset\(count == 1 ? "" : "s")")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.55))
-
-                    HStack(spacing: 8) {
-                        StatChip(label: "Health", value: health.formatted(.percent.precision(.fractionLength(0))), tint: VaultTheme.accent)
-                        StatChip(label: "Risk", value: risk.formatted(.percent.precision(.fractionLength(0))), tint: VaultTheme.warn)
-                    }
                 }
+                Spacer(minLength: 8)
+                VaultCore(health: health, risk: risk, signals: signals, size: expanded ? 138 : 116)
+            }
+
+            HStack(spacing: 8) {
+                StatChip(label: "Health", value: health.formatted(.percent.precision(.fractionLength(0))), tint: VaultTheme.accent)
+                StatChip(label: "Risk", value: risk.formatted(.percent.precision(.fractionLength(0))), tint: VaultTheme.warn)
                 Spacer(minLength: 0)
-                VaultCore(health: health, risk: risk, signals: signals, size: expanded ? 154 : 132)
             }
 
             if expanded {
@@ -410,7 +414,7 @@ struct PortfolioHero: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .glassCard(padding: 22)
+        .glassCard(padding: 18)
     }
 }
 

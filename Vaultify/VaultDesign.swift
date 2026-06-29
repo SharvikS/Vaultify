@@ -490,7 +490,7 @@ struct StatChip: View {
             Text(label.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.62))
         }
         .lineLimit(1)
-        .fixedSize()
+        .minimumScaleFactor(0.75)
         .padding(.vertical, 7)
         .padding(.horizontal, 11)
         .glassEffect(.regular, in: .capsule)
