@@ -6,18 +6,28 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		B991000A2FF2100000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B980EE962FEFFAF000E3BC21 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B980EE9D2FEFFAF000E3BC21;
+			remoteInfo = Vaultify;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-	B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vaultify.app; sourceTree = BUILT_PRODUCTS_DIR; };
-	B99100012FF2100000000001 /* VaultifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VaultifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vaultify.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B99100012FF2100000000001 /* VaultifyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VaultifyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-	B980EEA02FEFFAF000E3BC21 /* Vaultify */ = {
+		B980EEA02FEFFAF000E3BC21 /* Vaultify */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Vaultify;
 			sourceTree = "<group>";
 		};
-	B99100022FF2100000000001 /* VaultifyTests */ = {
+		B99100022FF2100000000001 /* VaultifyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = VaultifyTests;
 			sourceTree = "<group>";
@@ -25,14 +35,14 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-	B980EE9B2FEFFAF000E3BC21 /* Frameworks */ = {
+		B980EE9B2FEFFAF000E3BC21 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-	B99100032FF2100000000001 /* Frameworks */ = {
+		B99100032FF2100000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -62,18 +72,8 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXContainerItemProxy section */
-	B991000A2FF2100000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = B980EE962FEFFAF000E3BC21 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = B980EE9D2FEFFAF000E3BC21;
-			remoteInfo = Vaultify;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXNativeTarget section */
-	B980EE9D2FEFFAF000E3BC21 /* Vaultify */ = {
+		B980EE9D2FEFFAF000E3BC21 /* Vaultify */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B980EEAB2FEFFAF100E3BC21 /* Build configuration list for PBXNativeTarget "Vaultify" */;
 			buildPhases = (
@@ -95,7 +95,7 @@
 			productReference = B980EE9E2FEFFAF000E3BC21 /* Vaultify.app */;
 			productType = "com.apple.product-type.application";
 		};
-	B99100072FF2100000000001 /* VaultifyTests */ = {
+		B99100072FF2100000000001 /* VaultifyTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B991000D2FF2100000000001 /* Build configuration list for PBXNativeTarget "VaultifyTests" */;
 			buildPhases = (
@@ -158,14 +158,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-	B980EE9C2FEFFAF000E3BC21 /* Resources */ = {
+		B980EE9C2FEFFAF000E3BC21 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-	B99100052FF2100000000001 /* Resources */ = {
+		B99100052FF2100000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -175,14 +175,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-	B980EE9A2FEFFAF000E3BC21 /* Sources */ = {
+		B980EE9A2FEFFAF000E3BC21 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-	B99100042FF2100000000001 /* Sources */ = {
+		B99100042FF2100000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -192,7 +192,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-	B991000B2FF2100000000001 /* PBXTargetDependency */ = {
+		B991000B2FF2100000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = B980EE9D2FEFFAF000E3BC21 /* Vaultify */;
 			targetProxy = B991000A2FF2100000000001 /* PBXContainerItemProxy */;
@@ -391,7 +391,7 @@
 			};
 			name = Release;
 		};
-	B991000E2FF2100000000001 /* Debug */ = {
+		B991000E2FF2100000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -419,7 +419,7 @@
 			};
 			name = Debug;
 		};
-	B991000F2FF2100000000001 /* Release */ = {
+		B991000F2FF2100000000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
@@ -468,7 +468,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-	B991000D2FF2100000000001 /* Build configuration list for PBXNativeTarget "VaultifyTests" */ = {
+		B991000D2FF2100000000001 /* Build configuration list for PBXNativeTarget "VaultifyTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B991000E2FF2100000000001 /* Debug */,

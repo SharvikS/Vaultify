@@ -283,6 +283,7 @@ struct VaultHomeView: View {
                         symbol: "lock.shield"
                     ) { showAdd = true }
                 } else {
+                  GeometryReader { geo in
                     ScrollView {
                         VStack(spacing: 18) {
                             PortfolioHero(totalValue: totalValue, health: averageHealth, risk: riskLoad,
@@ -339,10 +340,13 @@ struct VaultHomeView: View {
                                 }
                             }
                         }
-                        .padding(18)
+                        .padding(.vertical, 18)
+                        .frame(width: max(0, geo.size.width - 32))
+                        .frame(maxWidth: .infinity)
                         .safeAreaPadding(.bottom, 94)
                     }
                     .scrollIndicators(.hidden)
+                  }
                 }
             }
             .navigationTitle("Vault")
@@ -451,10 +455,12 @@ struct VaultModeSwitch: View {
                         Text(mode.title)
                             .font(.caption.weight(.heavy))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .foregroundStyle(selection == mode ? .black : .white.opacity(0.66))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
+                    .padding(.horizontal, 4)
                     .background {
                         if selection == mode {
                             Capsule()
@@ -531,7 +537,7 @@ struct CommandPulse: View {
     let tint: Color
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: 8) {
             Image(systemName: symbol)
                 .font(.caption.weight(.black))
                 .foregroundStyle(tint)
@@ -539,14 +545,19 @@ struct CommandPulse: View {
                 Text(value)
                     .font(.headline.weight(.black))
                     .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(title.uppercased())
                     .font(.system(size: 8, weight: .heavy))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
-        .padding(12)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 11)
         .glassEffect(.regular.tint(tint.opacity(0.12)), in: .rect(cornerRadius: 18))
     }
 }
@@ -597,13 +608,17 @@ struct QuickStatTile: View {
                 .font(.system(.title2, design: .rounded, weight: .black))
                 .foregroundStyle(.white)
                 .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text(label.uppercased())
                 .font(.caption2.weight(.heavy))
                 .tracking(1)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.white.opacity(0.55))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard(20, padding: 16, tint: tint)
+        .glassCard(20, padding: 14, tint: tint)
     }
 }
 
@@ -626,6 +641,8 @@ struct ScanIntakeBanner: View {
                     Text("Scan an invoice")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("Auto-fill brand, model, price & date on-device.")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.55))
@@ -1809,6 +1826,7 @@ struct ApplianceDetailView: View {
     var body: some View {
         ZStack {
             VaultBackground()
+          GeometryReader { geo in
             ScrollView {
                 VStack(spacing: 16) {
                     DetailHeader(appliance: appliance)
@@ -1882,10 +1900,13 @@ struct ApplianceDetailView: View {
                     }
                     .transition(.scale(scale: 0.98).combined(with: .opacity))
                 }
-                .padding(18)
+                .padding(.vertical, 18)
+                .frame(width: max(0, geo.size.width - 32))
+                .frame(maxWidth: .infinity)
                 .safeAreaPadding(.bottom, 94)
             }
             .scrollIndicators(.hidden)
+          }
         }
         .navigationTitle(appliance.name)
         .navigationBarTitleDisplayMode(.inline)
