@@ -51,7 +51,8 @@ Alternate icons are switched live with `UIApplication.setAlternateIconName`, so 
 
 - **Liquid Glass** surfaces with consistent rounded geometry, hairline strokes, and tinted glass.
 - A living aurora backdrop: a static mesh gradient, two slow drifting light orbs, and a twinkling particle field — all GPU-light, and automatically reduced under Low Power Mode or Reduce Motion.
-- Signature animated visuals: the boot seal, portfolio core, event-horizon replacement timeline, and liquid gauges.
+- A sleek launch screen: the themed logo mark, a slim progress bar, and rotating appliance facts.
+- Signature animated visuals: the portfolio core, event-horizon replacement timeline, and liquid gauges.
 - Springy tab transitions, press feedback, interactive parallax lift on cards, and smooth theme crossfades.
 - Tuned for legibility: high-contrast typography over dark surfaces across every theme.
 
@@ -63,7 +64,7 @@ Vaultify is organized around a small set of Swift files:
 - `Models.swift` — `Appliance`, `WarrantyRecord`, `ServiceLog`, plus all derived scoring/lifecycle logic.
 - `ContentView.swift` — the main tab experience: Vault, Assets, Forecast, Intel, and Reports, plus Settings and detail/edit screens.
 - `VaultDesign.swift` — the Liquid Glass design system: theme palettes, the theme store, the living backdrop, and reusable glass primitives.
-- `VaultSignature.swift` — custom animated visuals (boot seal, portfolio core, event horizon timeline, liquid gauge).
+- `VaultSignature.swift` — the logo mark, the launch screen, and custom animated visuals (portfolio core, event horizon timeline, liquid gauge).
 - `VaultServices.swift` — invoice OCR, notification scheduling, share-sheet support, and PDF generation.
 - `AppIconStore.swift` — the alternate app-icon catalog and the manager that swaps the home-screen icon.
 - `DemoData.swift` — the curated sample household used by the demo action and screenshot capture.

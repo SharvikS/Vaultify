@@ -50,8 +50,8 @@ struct VaultifyApp: App {
                 if skipBoot {
                     booted = true
                 } else {
-                    try? await Task.sleep(for: .seconds(4.2))
-                    withAnimation(.easeOut(duration: 0.7)) { booted = true }
+                    try? await Task.sleep(for: .seconds(3.4))
+                    withAnimation(.easeOut(duration: 0.6)) { booted = true }
                 }
             }
         }

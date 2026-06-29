@@ -29,178 +29,161 @@ func healthColor(_ h: Double) -> Color {
     return h < 0.5 ? lerp(danger, warn, h / 0.5) : lerp(warn, accent, (h - 0.5) / 0.5)
 }
 
-// MARK: - Boot / seal sequence
+// MARK: - Brand mark
 
-/// Full-screen launch animation: an energy seal that converges, draws its
-/// hex sigil, and ignites — then the wordmark resolves.
-struct VaultBootView: View {
-    @State private var start = Date.now
+/// The Vaultify logo, drawn with SwiftUI shapes so it inherits the active theme:
+/// a vault keyhole inside the app's signature gauge ring.
+struct VaultLogoMark: View {
+    var size: CGFloat = 96
+    var lineWidth: CGFloat { size * 0.072 }
 
     var body: some View {
         ZStack {
-            VaultBackground()
+            // Gauge track (open at the bottom).
+            Circle()
+                .trim(from: 0, to: 0.78)
+                .stroke(.white.opacity(0.10), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(130))
 
-            TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 1.0 / 10.0 : 1.0 / 20.0)) { timeline in
-                let t = timeline.date.timeIntervalSince(start)
-                let p = min(1, t / 1.5)
-                let ease = 1 - pow(1 - p, 3)          // easeOutCubic
-                let ignite = max(0, (p - 0.7) / 0.3)  // last 30%
+            Circle()
+                .trim(from: 0, to: 0.78)
+                .stroke(VaultTheme.brandGradient, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(130))
 
-                Canvas { ctx, size in
-                    let c = CGPoint(x: size.width / 2, y: size.height / 2)
-                    let R = min(size.width, size.height) * 0.30
+            // Vault face.
+            Circle()
+                .fill(.black.opacity(0.55))
+                .frame(width: size * 0.5, height: size * 0.5)
+                .overlay(Circle().stroke(.white.opacity(0.12), lineWidth: 0.8).frame(width: size * 0.5, height: size * 0.5))
 
-                    // Expanding ripple rings.
-                    for i in 0..<3 {
-                        let rp = ((t / 1.6) + Double(i) / 3).truncatingRemainder(dividingBy: 1)
-                        let radius = R * (0.4 + CGFloat(rp) * 2.4)
-                        let ring = Path(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius, width: radius * 2, height: radius * 2))
-                        ctx.stroke(ring, with: .color(VaultTheme.accent.opacity((1 - rp) * 0.25)), lineWidth: 1)
-                    }
-
-                    // Converging particles.
-                    for k in 0..<32 {
-                        let ang = Double(k) / 32 * .pi * 2 + t * 0.6
-                        let dist = R * (2.3 * (1 - ease)) + R * 0.55 + sin(t * 3 + Double(k)) * 3
-                        let pt = CGPoint(x: c.x + cos(ang) * dist, y: c.y + sin(ang) * dist)
-                        let dotR = 1.4 + vfrac(k) * 1.8
-                        ctx.fill(Path(ellipseIn: CGRect(x: pt.x - dotR, y: pt.y - dotR, width: dotR * 2, height: dotR * 2)),
-                                 with: .color(VaultTheme.cyan.opacity(0.35 + 0.5 * ease)))
-                    }
-
-                    // Rotating tick ring.
-                    for k in 0..<48 {
-                        let ang = Double(k) / 48 * .pi * 2 + t * 0.4
-                        let inner = R * 1.18, outer = R * 1.18 + (k % 4 == 0 ? 9 : 5)
-                        var tick = Path()
-                        tick.move(to: CGPoint(x: c.x + cos(ang) * inner, y: c.y + sin(ang) * inner))
-                        tick.addLine(to: CGPoint(x: c.x + cos(ang) * outer, y: c.y + sin(ang) * outer))
-                        ctx.stroke(tick, with: .color(.white.opacity(0.10 + 0.25 * ease)), lineWidth: 1.2)
-                    }
-
-                    // Hex sigil, drawn (trimmed) by progress.
-                    var hex = Path()
-                    for i in 0...6 {
-                        let a = Double(i) / 6 * .pi * 2 - .pi / 2
-                        let pt = CGPoint(x: c.x + cos(a) * R, y: c.y + sin(a) * R)
-                        if i == 0 { hex.move(to: pt) } else { hex.addLine(to: pt) }
-                    }
-                    let drawn = hex.trimmedPath(from: 0, to: ease)
-                    ctx.stroke(drawn, with: .linearGradient(Gradient(colors: [VaultTheme.accent, VaultTheme.cyan]),
-                                                            startPoint: CGPoint(x: c.x - R, y: c.y - R),
-                                                            endPoint: CGPoint(x: c.x + R, y: c.y + R)),
-                               style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-
-                    // Ignition core glow.
-                    if ignite > 0 {
-                        let glowR = R * (0.2 + 0.55 * ignite)
-                        ctx.fill(Path(ellipseIn: CGRect(x: c.x - glowR, y: c.y - glowR, width: glowR * 2, height: glowR * 2)),
-                                 with: .radialGradient(Gradient(colors: [VaultTheme.accent.opacity(0.9 * ignite), .clear]),
-                                                       center: c, startRadius: 0, endRadius: glowR))
-                    }
-                }
-            }
-            .ignoresSafeArea()
-
-            // Wordmark resolves in.
-            VStack(spacing: 16) {
-                Spacer()
-                BootWordmark(start: start)
-                BootLoadingPanel(start: start)
-                Spacer().frame(height: 90)
-            }
-            .padding(.horizontal, 28)
+            // Keyhole.
+            KeyholeShape()
+                .fill(VaultTheme.brandGradient)
+                .frame(width: size * 0.2, height: size * 0.3)
         }
+        .frame(width: size, height: size)
     }
 }
 
-private struct BootWordmark: View {
-    let start: Date
-    var body: some View {
-        TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 1.0 / 10.0 : 1.0 / 20.0)) { timeline in
-            let t = timeline.date.timeIntervalSince(start)
-            let p = min(1, max(0, (t - 0.7) / 0.8))
-            Text("VAULTIFY")
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .tracking(14 - 8 * p)
-                .foregroundStyle(.white)
-                .opacity(p)
-                .shadow(color: VaultTheme.accent.opacity(0.6 * p), radius: 12)
-        }
+struct KeyholeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let cx = rect.midX
+        let headR = w * 0.5
+        p.addEllipse(in: CGRect(x: cx - headR, y: rect.minY, width: headR * 2, height: headR * 2))
+        let topY = rect.minY + headR * 1.3
+        let botY = rect.maxY
+        let topHW = w * 0.22
+        let botHW = w * 0.42
+        p.move(to: CGPoint(x: cx - topHW, y: topY))
+        p.addLine(to: CGPoint(x: cx + topHW, y: topY))
+        p.addLine(to: CGPoint(x: cx + botHW, y: botY))
+        p.addLine(to: CGPoint(x: cx - botHW, y: botY))
+        p.closeSubpath()
+        return p
     }
 }
 
-private struct BootLoadingPanel: View {
-    let start: Date
+// MARK: - Boot / launch screen
+
+/// Sleek launch screen: the logo + wordmark settle in, a slim progress bar
+/// fills, and a rotating set of appliance facts keeps the wait useful.
+struct VaultBootView: View {
+    @State private var start = Date.now
+    @State private var appeared = false
+
+    /// Kept just under the app's boot duration so the bar reads full on dismiss.
+    private let total: Double = 3.2
 
     private let facts = [
-        "Most major appliances last 8 to 15 years when service history is tracked.",
-        "A saved serial number can speed up warranty claims and insurance reports.",
-        "Routine filter cleaning can cut HVAC strain and delay replacement costs.",
+        "Most major appliances last 8–15 years when service history is tracked.",
+        "A saved serial number speeds up warranty claims and insurance reports.",
+        "Routine filter cleaning eases HVAC strain and delays replacement costs.",
         "Credit cards sometimes add extended warranty coverage after purchase.",
         "Repair costs above 40% of replacement value deserve a second look."
     ]
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 0.75 : 0.35)) { timeline in
-            let elapsed = max(0, timeline.date.timeIntervalSince(start) - 0.55)
-            let factIndex = min(facts.count - 1, Int(elapsed / 0.95) % facts.count)
-            let progress = min(1, max(0, elapsed / 3.55))
-            let pulse = 0.5 + 0.5 * sin(timeline.date.timeIntervalSinceReferenceDate * 3)
+        ZStack {
+            VaultBackground()
 
-            VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .stroke(VaultTheme.accent.opacity(0.22), lineWidth: 2)
-                            .frame(width: 34, height: 34)
-                        Circle()
-                            .trim(from: 0, to: progress)
-                            .stroke(VaultTheme.accent, style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: "sparkles")
-                            .font(.caption.weight(.black))
-                            .foregroundStyle(VaultTheme.accent)
-                            .scaleEffect(0.94 + 0.08 * pulse)
-                    }
+            VStack(spacing: 0) {
+                Spacer()
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Preparing your vault")
-                            .font(.caption.weight(.heavy))
+                VStack(spacing: 22) {
+                    VaultLogoMark(size: 104)
+                        .shadow(color: VaultTheme.accent.opacity(0.35), radius: 24)
+
+                    VStack(spacing: 6) {
+                        Text("Vaultify")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                        Text(facts[factIndex])
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.66))
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.82)
-                            .contentTransition(.opacity)
-                    }
-
-                    Spacer(minLength: 0)
-                }
-
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.10))
-                        Capsule()
-                            .fill(LinearGradient(colors: [VaultTheme.accent, VaultTheme.cyan], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(18, proxy.size.width * progress))
+                        Text("Your home asset vault")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.5))
                     }
                 }
-                .frame(height: 5)
+                .opacity(appeared ? 1 : 0)
+                .scaleEffect(appeared ? 1 : 0.94)
+                .blur(radius: appeared ? 0 : 6)
+
+                Spacer()
+
+                bootFooter
+                    .opacity(appeared ? 1 : 0)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 64)
             }
-            .padding(14)
-            .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(.white.opacity(0.14), lineWidth: 0.8)
-            )
-            .shadow(color: .black.opacity(0.28), radius: 10, y: 5)
-            .opacity(elapsed > 0 ? 1 : 0)
-            .animation(.easeInOut(duration: 0.25), value: factIndex)
         }
-        .frame(maxWidth: 420)
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.7)) { appeared = true }
+        }
+    }
+
+    private var bootFooter: some View {
+        TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
+            let elapsed = max(0, timeline.date.timeIntervalSince(start))
+            let progress = min(1, elapsed / total)
+            let factIndex = min(facts.count - 1, Int(elapsed / 1.25) % facts.count)
+
+            VStack(spacing: 18) {
+                Text(facts[factIndex])
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .frame(height: 38)
+                    .id(factIndex)
+                    .transition(.opacity)
+                    .animation(.easeInOut(duration: 0.45), value: factIndex)
+
+                VStack(spacing: 8) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.white.opacity(0.10))
+                            Capsule()
+                                .fill(VaultTheme.brandGradient)
+                                .frame(width: max(6, proxy.size.width * progress))
+                                .shadow(color: VaultTheme.accent.opacity(0.5), radius: 5)
+                        }
+                    }
+                    .frame(height: 4)
+
+                    HStack {
+                        Text("Preparing your vault")
+                        Spacer()
+                        Text("\(Int(progress * 100))%")
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+                }
+            }
+        }
+        .frame(maxWidth: 460)
     }
 }
 
