@@ -26,6 +26,14 @@ Vaultify ships with four hand-tuned dark themes, switchable live from **Settings
 
 Each theme defines its own accent set and a procedurally tinted mesh-gradient backdrop. Your choice is persisted across launches.
 
+## App Icons
+
+The Vaultify mark is a vault keyhole inside the app's signature gauge ring — security plus the at-a-glance health dial the whole app is built around. Pick from five themed home-screen icons in **Settings → App icon**.
+
+<img src="docs/screenshots/app-icons.png" alt="Vaultify app icon variants: Midnight, Catppuccin, Tokyo Night, One Dark, Aurora" width="640">
+
+Alternate icons are switched live with `UIApplication.setAlternateIconName`, so the change applies instantly without relaunching.
+
 ## What It Does
 
 - Tracks appliances by name, brand, model, serial number, category, room, purchase date, purchase price, replacement cost, and lifespan.
@@ -57,6 +65,7 @@ Vaultify is organized around a small set of Swift files:
 - `VaultDesign.swift` — the Liquid Glass design system: theme palettes, the theme store, the living backdrop, and reusable glass primitives.
 - `VaultSignature.swift` — custom animated visuals (boot seal, portfolio core, event horizon timeline, liquid gauge).
 - `VaultServices.swift` — invoice OCR, notification scheduling, share-sheet support, and PDF generation.
+- `AppIconStore.swift` — the alternate app-icon catalog and the manager that swaps the home-screen icon.
 - `DemoData.swift` — the curated sample household used by the demo action and screenshot capture.
 
 ## Requirements
@@ -102,6 +111,7 @@ The app understands launch arguments for deterministic, scriptable capture:
 | `-VaultSkipBoot YES` | Skips the boot animation |
 | `-VaultInitialTab <vault\|assets\|forecast\|insights\|reports>` | Opens straight to a tab |
 | `-VaultThemeKind <midnight\|catppuccin\|tokyoNight\|oneDarkPro>` | Forces a theme |
+| `-VaultOpenSettings YES` | Opens the Settings sheet on launch |
 
 Example — boot an iPhone simulator, install the build, then:
 

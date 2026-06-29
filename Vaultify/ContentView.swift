@@ -360,6 +360,9 @@ struct VaultHomeView: View {
             }
             .sheet(isPresented: $showAdd) { AddApplianceView() }
             .sheet(isPresented: $showSettings) { SettingsSheet(appliances: appliances) }
+            .task {
+                if UserDefaults.standard.bool(forKey: "VaultOpenSettings") { showSettings = true }
+            }
         }
     }
 }
@@ -1622,6 +1625,72 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 // MARK: - Settings
 
+/// App-icon gallery — tap a tile to swap the home-screen icon.
+struct AppIconPickerSection: View {
+    @Bindable var store: AppIconStore
+
+    private let columns = [GridItem(.adaptive(minimum: 92), spacing: 12)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GlassSectionHeader(title: "App icon", caption: "home screen")
+            if store.supportsAlternateIcons {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(VaultAppIcon.allCases) { icon in
+                        AppIconTile(icon: icon, isSelected: store.selected == icon) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                store.apply(icon)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("Alternate icons aren't available on this device.")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.54))
+            }
+        }
+    }
+}
+
+struct AppIconTile: View {
+    let icon: VaultAppIcon
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                Image(icon.previewAsset)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .stroke(isSelected ? VaultTheme.accent : .white.opacity(0.12),
+                                    lineWidth: isSelected ? 2.5 : 1)
+                    )
+                    .overlay(alignment: .bottomTrailing) {
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.callout.weight(.bold))
+                                .foregroundStyle(.white, VaultTheme.accent)
+                                .padding(3)
+                        }
+                    }
+                Text(icon.title)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.vaultPress)
+    }
+}
+
 /// Theme gallery — tap a card to recolor the whole vault with a smooth crossfade.
 struct ThemePickerSection: View {
     @Bindable var theme: VaultThemeStore
@@ -1718,6 +1787,7 @@ struct SettingsSheet: View {
     @State private var notifications = VaultNotifications.shared
     @State private var remindersOn = false
     @State private var theme = VaultThemeStore.shared
+    @State private var iconStore = AppIconStore.shared
 
     var body: some View {
         NavigationStack {
@@ -1733,6 +1803,8 @@ struct SettingsSheet: View {
                                   tint: VaultTheme.violet)
 
                         ThemePickerSection(theme: theme)
+
+                        AppIconPickerSection(store: iconStore)
 
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
