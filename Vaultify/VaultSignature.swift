@@ -87,14 +87,13 @@ struct KeyholeShape: Shape {
 
 // MARK: - Boot / launch screen
 
-/// Sleek launch screen: the logo + wordmark settle in, a slim progress bar
-/// fills, and a rotating set of appliance facts keeps the wait useful.
+/// Sleek launch screen. It is opt-in for demos so normal launches can go
+/// straight to the app without artificial waiting.
 struct VaultBootView: View {
     @State private var start = Date.now
     @State private var appeared = false
 
-    /// Kept just under the app's boot duration so the bar reads full on dismiss.
-    private let total: Double = 3.2
+    private let total: Double = 0.45
 
     private let facts = [
         "Most major appliances last 8–15 years when service history is tracked.",
@@ -142,7 +141,7 @@ struct VaultBootView: View {
     }
 
     private var bootFooter: some View {
-        TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(minimumInterval: vaultReducedPerformanceMode ? 1.0 / 8.0 : 1.0 / 20.0)) { timeline in
             let elapsed = max(0, timeline.date.timeIntervalSince(start))
             let progress = min(1, elapsed / total)
             let factIndex = min(facts.count - 1, Int(elapsed / 1.25) % facts.count)
@@ -286,7 +285,7 @@ struct VaultCore: View {
 /// as its replacement date approaches. Distance = years remaining, size = cost.
 struct EventHorizon: View {
     struct Node: Identifiable {
-        let id = UUID()
+        var id: String
         var years: Double
         var cost: Double
         var color: Color

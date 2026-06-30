@@ -89,52 +89,70 @@ enum VaultThemeKind: String, CaseIterable, Identifiable {
 
     var palette: VaultPalette {
         switch self {
-        case .midnight:
-            let base = Color(red: 0.030, green: 0.035, blue: 0.046)
-            return VaultPalette(
-                accent: Color(red: 0.27, green: 0.71, blue: 0.60),
-                cyan: Color(red: 0.44, green: 0.61, blue: 0.78),
-                violet: Color(red: 0.49, green: 0.53, blue: 0.66),
-                warn: Color(red: 0.86, green: 0.67, blue: 0.38),
-                danger: Color(red: 0.80, green: 0.41, blue: 0.41),
-                bgBase: base,
-                mesh: VaultPalette.mesh(base, Color(red: 0.27, green: 0.71, blue: 0.60), Color(red: 0.44, green: 0.61, blue: 0.78))
-            )
-        case .catppuccin:
-            let base = Color(hex: 0x1E1E2E)
-            return VaultPalette(
-                accent: Color(hex: 0xCBA6F7),   // mauve
-                cyan: Color(hex: 0x89B4FA),     // blue
-                violet: Color(hex: 0xB4BEFE),   // lavender
-                warn: Color(hex: 0xFAB387),     // peach
-                danger: Color(hex: 0xF38BA8),   // red
-                bgBase: base,
-                mesh: VaultPalette.mesh(base, Color(hex: 0xCBA6F7), Color(hex: 0x89B4FA))
-            )
-        case .tokyoNight:
-            let base = Color(hex: 0x1A1B26)
-            return VaultPalette(
-                accent: Color(hex: 0x7AA2F7),   // blue
-                cyan: Color(hex: 0x7DCFFF),     // cyan
-                violet: Color(hex: 0xBB9AF7),   // purple
-                warn: Color(hex: 0xE0AF68),     // yellow
-                danger: Color(hex: 0xF7768E),   // red
-                bgBase: base,
-                mesh: VaultPalette.mesh(base, Color(hex: 0x7AA2F7), Color(hex: 0xBB9AF7))
-            )
-        case .oneDarkPro:
-            let base = Color(hex: 0x282C34)
-            return VaultPalette(
-                accent: Color(hex: 0x61AFEF),   // blue
-                cyan: Color(hex: 0x56B6C2),     // cyan
-                violet: Color(hex: 0xC678DD),   // purple
-                warn: Color(hex: 0xE5C07B),     // yellow
-                danger: Color(hex: 0xE06C75),   // red
-                bgBase: base,
-                mesh: VaultPalette.mesh(base, Color(hex: 0x61AFEF), Color(hex: 0x56B6C2))
-            )
+        case .midnight: VaultPalettes.midnight
+        case .catppuccin: VaultPalettes.catppuccin
+        case .tokyoNight: VaultPalettes.tokyoNight
+        case .oneDarkPro: VaultPalettes.oneDarkPro
         }
     }
+}
+
+private enum VaultPalettes {
+    static let midnight: VaultPalette = {
+        let base = Color(red: 0.030, green: 0.035, blue: 0.046)
+        return VaultPalette(
+            accent: Color(red: 0.27, green: 0.71, blue: 0.60),
+            cyan: Color(red: 0.44, green: 0.61, blue: 0.78),
+            violet: Color(red: 0.49, green: 0.53, blue: 0.66),
+            warn: Color(red: 0.86, green: 0.67, blue: 0.38),
+            danger: Color(red: 0.80, green: 0.41, blue: 0.41),
+            bgBase: base,
+            mesh: VaultPalette.mesh(
+                base,
+                Color(red: 0.27, green: 0.71, blue: 0.60),
+                Color(red: 0.44, green: 0.61, blue: 0.78)
+            )
+        )
+    }()
+
+    static let catppuccin: VaultPalette = {
+        let base = Color(hex: 0x1E1E2E)
+        return VaultPalette(
+            accent: Color(hex: 0xCBA6F7),
+            cyan: Color(hex: 0x89B4FA),
+            violet: Color(hex: 0xB4BEFE),
+            warn: Color(hex: 0xFAB387),
+            danger: Color(hex: 0xF38BA8),
+            bgBase: base,
+            mesh: VaultPalette.mesh(base, Color(hex: 0xCBA6F7), Color(hex: 0x89B4FA))
+        )
+    }()
+
+    static let tokyoNight: VaultPalette = {
+        let base = Color(hex: 0x1A1B26)
+        return VaultPalette(
+            accent: Color(hex: 0x7AA2F7),
+            cyan: Color(hex: 0x7DCFFF),
+            violet: Color(hex: 0xBB9AF7),
+            warn: Color(hex: 0xE0AF68),
+            danger: Color(hex: 0xF7768E),
+            bgBase: base,
+            mesh: VaultPalette.mesh(base, Color(hex: 0x7AA2F7), Color(hex: 0xBB9AF7))
+        )
+    }()
+
+    static let oneDarkPro: VaultPalette = {
+        let base = Color(hex: 0x282C34)
+        return VaultPalette(
+            accent: Color(hex: 0x61AFEF),
+            cyan: Color(hex: 0x56B6C2),
+            violet: Color(hex: 0xC678DD),
+            warn: Color(hex: 0xE5C07B),
+            danger: Color(hex: 0xE06C75),
+            bgBase: base,
+            mesh: VaultPalette.mesh(base, Color(hex: 0x61AFEF), Color(hex: 0x56B6C2))
+        )
+    }()
 }
 
 /// Observable holder for the active theme. Persists the choice across launches.
@@ -184,11 +202,21 @@ var vaultCurrencyCode: String {
 }
 
 var vaultReducedPerformanceMode: Bool {
-    ProcessInfo.processInfo.isLowPowerModeEnabled
+    let processInfo = ProcessInfo.processInfo
+    return processInfo.isLowPowerModeEnabled
+        || processInfo.thermalState == .serious
+        || processInfo.thermalState == .critical
 }
 
 extension Appliance {
     /// Single source of truth for an asset's signal color.
+    var signalColor: Color {
+        riskScore > 0.62 ? VaultTheme.danger : riskScore > 0.38 ? VaultTheme.warn : VaultTheme.accent
+    }
+}
+
+extension ApplianceSnapshot {
+    /// Cached risk score with the active theme's current palette.
     var signalColor: Color {
         riskScore > 0.62 ? VaultTheme.danger : riskScore > 0.38 ? VaultTheme.warn : VaultTheme.accent
     }
@@ -202,8 +230,8 @@ struct VaultBackground: View {
     @State private var drift = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var particleCount: Int { reduceMotion || vaultReducedPerformanceMode ? 10 : 24 }
-    private var particleFrameInterval: TimeInterval { reduceMotion || vaultReducedPerformanceMode ? 1.0 / 4.0 : 1.0 / 10.0 }
+    private var particleCount: Int { reduceMotion || vaultReducedPerformanceMode ? 0 : 12 }
+    private var particleFrameInterval: TimeInterval { 1.0 / 6.0 }
 
     var body: some View {
         let palette = VaultTheme.palette
@@ -232,28 +260,30 @@ struct VaultBackground: View {
                 .blur(radius: 82)
                 .offset(x: drift ? 150 : 110, y: drift ? 300 : 350)
 
-            // Drifting particle field — slow rising motes that twinkle.
-            TimelineView(.animation(minimumInterval: particleFrameInterval)) { timeline in
-                let t = timeline.date.timeIntervalSinceReferenceDate
-                Canvas { ctx, size in
-                    for i in 0..<particleCount {
-                        let fx = vfrac(i * 2)
-                        let speed = 5 + vfrac(i * 3 + 1) * 12
-                        let baseY = vfrac(i * 5 + 2) * size.height
-                        let y = baseY - CGFloat(t).truncatingRemainder(dividingBy: size.height / speed) * speed
-                        let wrapped = (y.truncatingRemainder(dividingBy: size.height) + size.height).truncatingRemainder(dividingBy: size.height)
-                        let x = fx * size.width + sin(t * 0.4 + fx * 8) * 8
-                        let twinkle = 0.3 + 0.7 * abs(sin(t * (0.5 + vfrac(i + 7)) + fx * 6))
-                        let r = 0.6 + vfrac(i * 7 + 3) * 1.7
-                        ctx.fill(
-                            Path(ellipseIn: CGRect(x: x, y: wrapped, width: r * 2, height: r * 2)),
-                            with: .color(.white.opacity(0.04 + 0.12 * twinkle))
-                        )
+            if particleCount > 0 {
+                // Drifting particle field — slow rising motes that twinkle.
+                TimelineView(.animation(minimumInterval: particleFrameInterval)) { timeline in
+                    let t = timeline.date.timeIntervalSinceReferenceDate
+                    Canvas { ctx, size in
+                        for i in 0..<particleCount {
+                            let fx = vfrac(i * 2)
+                            let speed = 5 + vfrac(i * 3 + 1) * 12
+                            let baseY = vfrac(i * 5 + 2) * size.height
+                            let y = baseY - CGFloat(t).truncatingRemainder(dividingBy: size.height / speed) * speed
+                            let wrapped = (y.truncatingRemainder(dividingBy: size.height) + size.height).truncatingRemainder(dividingBy: size.height)
+                            let x = fx * size.width + sin(t * 0.4 + fx * 8) * 8
+                            let twinkle = 0.3 + 0.7 * abs(sin(t * (0.5 + vfrac(i + 7)) + fx * 6))
+                            let r = 0.6 + vfrac(i * 7 + 3) * 1.7
+                            ctx.fill(
+                                Path(ellipseIn: CGRect(x: x, y: wrapped, width: r * 2, height: r * 2)),
+                                with: .color(.white.opacity(0.04 + 0.12 * twinkle))
+                            )
+                        }
                     }
                 }
+                .ignoresSafeArea()
+                .blendMode(.plusLighter)
             }
-            .ignoresSafeArea()
-            .blendMode(.plusLighter)
         }
         .onAppear {
             guard !reduceMotion, !vaultReducedPerformanceMode else { return }
@@ -290,45 +320,68 @@ private struct GlassCardModifier: ViewModifier {
     let padding: CGFloat
     let tint: Color?
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .padding(padding)
-            .glassEffect(
-                tint.map { Glass.regular.tint($0.opacity(0.18)) } ?? .regular,
-                in: .rect(cornerRadius: radius)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .stroke(.white.opacity(0.10), lineWidth: 0.75)
-            )
+        if reduceTransparency || vaultReducedPerformanceMode {
+            content
+                .padding(padding)
+                .background(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill((tint ?? .white).opacity(tint == nil ? 0.075 : 0.14))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .stroke(.white.opacity(0.10), lineWidth: 0.75)
+                )
+        } else {
+            content
+                .padding(padding)
+                .glassEffect(
+                    tint.map { Glass.regular.tint($0.opacity(0.18)) } ?? .regular,
+                    in: .rect(cornerRadius: radius)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .stroke(.white.opacity(0.10), lineWidth: 0.75)
+                )
+        }
     }
 }
 
 private struct InteractiveLiftModifier: ViewModifier {
     let tint: Color
     @State private var tilt = CGSize.zero
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .rotation3DEffect(.degrees(Double(tilt.height) / -18), axis: (x: 1, y: 0, z: 0))
-            .rotation3DEffect(.degrees(Double(tilt.width) / 18), axis: (x: 0, y: 1, z: 0))
-            .shadow(color: tint.opacity(0.10), radius: tilt == .zero ? 4 : 12, y: tilt == .zero ? 2 : 8)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.78)) {
-                            tilt = CGSize(
-                                width: max(-12, min(12, value.translation.width)),
-                                height: max(-12, min(12, value.translation.height))
-                            )
+        if reduceMotion || vaultReducedPerformanceMode {
+            content
+                .shadow(color: tint.opacity(0.06), radius: 3, y: 2)
+        } else {
+            content
+                .rotation3DEffect(.degrees(Double(tilt.height) / -18), axis: (x: 1, y: 0, z: 0))
+                .rotation3DEffect(.degrees(Double(tilt.width) / 18), axis: (x: 0, y: 1, z: 0))
+                .shadow(color: tint.opacity(0.10), radius: tilt == .zero ? 4 : 12, y: tilt == .zero ? 2 : 8)
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 8)
+                        .onChanged { value in
+                            withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.78)) {
+                                tilt = CGSize(
+                                    width: max(-12, min(12, value.translation.width)),
+                                    height: max(-12, min(12, value.translation.height))
+                                )
+                            }
                         }
-                    }
-                    .onEnded { _ in
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
-                            tilt = .zero
+                        .onEnded { _ in
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.76)) {
+                                tilt = .zero
+                            }
                         }
-                    }
-            )
+                )
+        }
     }
 }
 

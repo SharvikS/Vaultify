@@ -76,7 +76,7 @@ final class AppIconStore {
         UIApplication.shared.setAlternateIconName(icon.alternateName) { [weak self] error in
             if error != nil {
                 // Revert the selection if the system rejected the change.
-                Task { @MainActor in self?.selected = previous }
+                Task { @MainActor [weak self] in self?.selected = previous }
             }
         }
     }

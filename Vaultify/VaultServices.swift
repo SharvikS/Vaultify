@@ -74,6 +74,17 @@ struct DocumentScanner: UIViewControllerRepresentable {
 
 /// On-device text recognition + lightweight invoice field parsing.
 enum InvoiceOCR {
+    private static let knownBrands = [
+        "LG", "Samsung", "Whirlpool", "Bosch", "GE", "Maytag", "KitchenAid",
+        "Frigidaire", "Panasonic", "Sony", "Daikin", "Carrier", "Haier",
+        "Electrolux", "Dyson", "Philips", "Sharp", "Toshiba", "Hitachi",
+        "Voltas", "Godrej", "IFB", "Midea", "Hisense", "TCL"
+    ]
+
+    private static let dateDetector = try? NSDataDetector(
+        types: NSTextCheckingResult.CheckingType.date.rawValue
+    )
+
     static func recognize(in images: [CGImage], completion: @escaping (Result<ExtractedInvoice, Error>) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
             var lines: [String] = []
@@ -100,11 +111,6 @@ enum InvoiceOCR {
     static func parse(lines: [String]) -> ExtractedInvoice {
         var result = ExtractedInvoice()
         result.rawText = lines.joined(separator: "\n")
-
-        let knownBrands = ["LG", "Samsung", "Whirlpool", "Bosch", "GE", "Maytag", "KitchenAid",
-                           "Frigidaire", "Panasonic", "Sony", "Daikin", "Carrier", "Haier",
-                           "Electrolux", "Dyson", "Philips", "Sharp", "Toshiba", "Hitachi",
-                           "Voltas", "Godrej", "IFB", "Midea", "Hisense", "TCL"]
 
         for raw in lines {
             let line = raw.trimmingCharacters(in: .whitespaces)
@@ -172,7 +178,7 @@ enum InvoiceOCR {
     }
 
     private static func detectDate(in line: String) -> Date? {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else { return nil }
+        guard let detector = dateDetector else { return nil }
         let range = NSRange(line.startIndex..., in: line)
         return detector.firstMatch(in: line, range: range)?.date
     }
@@ -205,26 +211,26 @@ final class VaultNotifications {
         guard isAuthorized else { return }
         center.removeAllPendingNotificationRequests()
 
-        for appliance in appliances {
+        for snapshot in appliances.map({ ApplianceSnapshot($0) }) {
             // Warranty claim window — fire 14 days before expiry.
-            if let expiry = appliance.nextWarrantyExpiration,
+            if let expiry = snapshot.nextWarrantyExpiration,
                let fire = Calendar.current.date(byAdding: .day, value: -14, to: expiry),
                fire > .now {
                 schedule(
-                    id: "warranty-\(appliance.persistentModelID.hashValue)",
+                    id: "warranty-\(snapshot.id)",
                     title: "Warranty closing soon",
-                    body: "\(appliance.name) warranty expires \(expiry.formatted(date: .abbreviated, time: .omitted)). File any claims now.",
+                    body: "\(snapshot.name) warranty expires \(expiry.formatted(date: .abbreviated, time: .omitted)). File any claims now.",
                     on: fire
                 )
             }
 
             // Maintenance due reminder.
-            if appliance.nextMaintenanceDate > .now {
+            if snapshot.nextMaintenanceDate > .now {
                 schedule(
-                    id: "service-\(appliance.persistentModelID.hashValue)",
+                    id: "service-\(snapshot.id)",
                     title: "Maintenance due",
-                    body: "Time for a routine check on your \(appliance.name).",
-                    on: appliance.nextMaintenanceDate
+                    body: "Time for a routine check on your \(snapshot.name).",
+                    on: snapshot.nextMaintenanceDate
                 )
             }
         }
@@ -246,8 +252,41 @@ final class VaultNotifications {
 // MARK: - PDF export
 
 enum VaultPDF {
+    struct DossierItem: Sendable {
+        let name: String
+        let displayBrand: String
+        let categoryTitle: String
+        let modelNumber: String
+        let serialNumber: String
+        let purchaseDate: Date
+        let purchasePrice: Double
+        let healthScore: Double
+        let replacementBudgetTarget: Double
+        let nextWarrantyExpiration: Date?
+
+        init(snapshot: ApplianceSnapshot) {
+            name = snapshot.name
+            displayBrand = snapshot.displayBrand
+            categoryTitle = snapshot.category.title
+            modelNumber = snapshot.modelNumber
+            serialNumber = snapshot.serialNumber
+            purchaseDate = snapshot.purchaseDate
+            purchasePrice = snapshot.purchasePrice
+            healthScore = snapshot.healthScore
+            replacementBudgetTarget = snapshot.replacementBudgetTarget
+            nextWarrantyExpiration = snapshot.nextWarrantyExpiration
+        }
+    }
+
     /// Renders a clean appliance dossier to a temporary PDF file and returns its URL.
     static func dossier(title: String, subtitle: String, appliances: [Appliance]) -> URL? {
+        let items = appliances.map { DossierItem(snapshot: ApplianceSnapshot($0)) }
+        return dossier(title: title, subtitle: subtitle, items: items, currencyCode: vaultCurrencyCode)
+    }
+
+    /// Renders a clean appliance dossier from immutable value data, suitable for
+    /// background export without touching SwiftData model instances.
+    nonisolated static func dossier(title: String, subtitle: String, items: [DossierItem], currencyCode: String) -> URL? {
         let pageWidth: CGFloat = 612, pageHeight: CGFloat = 792
         let margin: CGFloat = 48
         let bounds = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
@@ -256,8 +295,8 @@ enum VaultPDF {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Vaultify-\(UUID().uuidString.prefix(8)).pdf")
 
-        let accent = UIColor(VaultTheme.cyan)
-        let currency: (Double) -> String = { $0.formatted(.currency(code: vaultCurrencyCode)) }
+        let accent = UIColor(red: 0.44, green: 0.61, blue: 0.78, alpha: 1)
+        let currency: (Double) -> String = { $0.formatted(.currency(code: currencyCode)) }
 
         do {
             try renderer.writePDF(to: url) { ctx in
@@ -289,8 +328,8 @@ enum VaultPDF {
                      font: .systemFont(ofSize: 10), color: .gray)
                 y += 30
 
-                let total = appliances.reduce(0.0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
-                text("Tracked assets: \(appliances.count)     Estimated contents value: \(currency(total))",
+                let total = items.reduce(0.0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
+                text("Tracked assets: \(items.count)     Estimated contents value: \(currency(total))",
                      font: .systemFont(ofSize: 12, weight: .semibold))
                 y += 28
 
@@ -300,18 +339,18 @@ enum VaultPDF {
                 line.stroke()
                 y += 18
 
-                for appliance in appliances {
+                for item in items {
                     newPageIfNeeded(96)
-                    text(appliance.name, font: .systemFont(ofSize: 15, weight: .bold))
+                    text(item.name, font: .systemFont(ofSize: 15, weight: .bold))
                     y += 20
-                    text("\(appliance.displayBrand)  ·  \(appliance.category.title)  ·  Model \(appliance.modelNumber.isEmpty ? "—" : appliance.modelNumber)",
+                    text("\(item.displayBrand)  ·  \(item.categoryTitle)  ·  Model \(item.modelNumber.isEmpty ? "—" : item.modelNumber)",
                          font: .systemFont(ofSize: 11), color: .darkGray)
                     y += 16
-                    text("Serial \(appliance.serialNumber.isEmpty ? "—" : appliance.serialNumber)  ·  Purchased \(appliance.purchaseDate.formatted(date: .abbreviated, time: .omitted))  ·  \(currency(appliance.purchasePrice))",
+                    text("Serial \(item.serialNumber.isEmpty ? "—" : item.serialNumber)  ·  Purchased \(item.purchaseDate.formatted(date: .abbreviated, time: .omitted))  ·  \(currency(item.purchasePrice))",
                          font: .systemFont(ofSize: 11), color: .darkGray)
                     y += 16
-                    let warranty = appliance.nextWarrantyExpiration.map { "Warranty until \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "No active warranty"
-                    text("Health \(appliance.healthScore.formatted(.percent.precision(.fractionLength(0))))  ·  \(warranty)  ·  Replacement \(currency(appliance.replacementBudgetTarget))",
+                    let warranty = item.nextWarrantyExpiration.map { "Warranty until \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "No active warranty"
+                    text("Health \(item.healthScore.formatted(.percent.precision(.fractionLength(0))))  ·  \(warranty)  ·  Replacement \(currency(item.replacementBudgetTarget))",
                          font: .systemFont(ofSize: 11), color: .darkGray)
                     y += 24
                 }

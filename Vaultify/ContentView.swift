@@ -249,29 +249,9 @@ struct VaultHomeView: View {
     @State private var mode = VaultHomeMode.command
     @State private var heroExpanded = false
 
-    private var totalValue: Double { appliances.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) } }
-    private var averageHealth: Double {
-        appliances.isEmpty ? 0 : appliances.reduce(0) { $0 + $1.healthScore } / Double(appliances.count)
-    }
-    private var riskLoad: Double {
-        appliances.isEmpty ? 0 : appliances.reduce(0) { $0 + $1.riskScore } / Double(appliances.count)
-    }
-    private var reserve: Double {
-        appliances.reduce(0) { $0 + max(0, $1.replacementBudgetTarget * (1 - $1.healthScore)) }
-    }
-    private var claimsDue: [Appliance] {
-        appliances.filter { ($0.daysUntilWarrantyExpires ?? .max) <= 90 }
-            .sorted { ($0.daysUntilWarrantyExpires ?? .max) < ($1.daysUntilWarrantyExpires ?? .max) }
-    }
-    private var serviceDue: [Appliance] {
-        appliances.filter { $0.nextMaintenanceDate <= .now }
-    }
-    private var attention: [Appliance] {
-        appliances.filter { $0.riskScore > 0.45 || $0.shouldReviewRepairVsReplace }
-            .sorted { $0.riskScore > $1.riskScore }
-    }
-
     var body: some View {
+        let portfolio = AppliancePortfolioSnapshot(appliances: appliances)
+
         NavigationStack {
             ZStack {
                 VaultBackground()
@@ -286,37 +266,37 @@ struct VaultHomeView: View {
                   GeometryReader { geo in
                     ScrollView {
                         VStack(spacing: 18) {
-                            PortfolioHero(totalValue: totalValue, health: averageHealth, risk: riskLoad,
-                                          count: appliances.count, signals: appliances.map(\.riskScore),
+                            PortfolioHero(totalValue: portfolio.totalValue, health: portfolio.averageHealth, risk: portfolio.riskLoad,
+                                          count: appliances.count, signals: portfolio.signals,
                                           expanded: heroExpanded)
                                 .onTapGesture {
                                     withAnimation(.spring(response: 0.48, dampingFraction: 0.82)) {
                                         heroExpanded.toggle()
                                     }
                                 }
-                                .interactiveLift(tint: healthColor(averageHealth))
+                                .interactiveLift(tint: healthColor(portfolio.averageHealth))
 
                             VaultModeSwitch(selection: $mode)
-                            VaultModePanel(mode: mode, reserve: reserve, totalValue: totalValue,
-                                           claimsDue: claimsDue, serviceDue: serviceDue,
-                                           attention: attention) { showAdd = true }
+                            VaultModePanel(mode: mode, reserve: portfolio.reserve, totalValue: portfolio.totalValue,
+                                           claimsDue: portfolio.claimsDue, serviceDue: portfolio.serviceDue,
+                                           attention: portfolio.attention) { showAdd = true }
 
                             HStack(spacing: 12) {
                                 QuickStatTile(value: "\(appliances.count)", label: "Assets", symbol: "shippingbox.fill", tint: VaultTheme.accent)
-                                QuickStatTile(value: "\(claimsDue.count)", label: "Claims", symbol: "bell.badge.fill", tint: VaultTheme.warn)
-                                QuickStatTile(value: "\(serviceDue.count)", label: "Service", symbol: "wrench.adjustable.fill", tint: VaultTheme.cyan)
+                                QuickStatTile(value: "\(portfolio.claimsDue.count)", label: "Claims", symbol: "bell.badge.fill", tint: VaultTheme.warn)
+                                QuickStatTile(value: "\(portfolio.serviceDue.count)", label: "Service", symbol: "wrench.adjustable.fill", tint: VaultTheme.cyan)
                             }
 
                             ScanIntakeBanner { showAdd = true }
 
-                            if !attention.isEmpty {
+                            if !portfolio.attention.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    GlassSectionHeader(title: "Needs attention", caption: "\(attention.count) flagged")
+                                    GlassSectionHeader(title: "Needs attention", caption: "\(portfolio.attention.count) flagged")
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 12) {
-                                            ForEach(attention.prefix(8)) { appliance in
-                                                NavigationLink { ApplianceDetailView(appliance: appliance) } label: {
-                                                    AttentionCard(appliance: appliance)
+                                            ForEach(portfolio.attention.prefix(8)) { snapshot in
+                                                NavigationLink { ApplianceDetailView(appliance: snapshot.appliance) } label: {
+                                                    AttentionCard(snapshot: snapshot)
                                                 }
                                                 .buttonStyle(.plain)
                                             }
@@ -327,14 +307,14 @@ struct VaultHomeView: View {
 
                             VStack(alignment: .leading, spacing: 12) {
                                 GlassSectionHeader(title: "Reserve outlook", caption: "self-fund")
-                                ReserveCard(reserve: reserve, total: totalValue)
+                                ReserveCard(reserve: portfolio.reserve, total: portfolio.totalValue)
                             }
 
                             VStack(alignment: .leading, spacing: 12) {
                                 GlassSectionHeader(title: "Recent assets")
-                                ForEach(appliances.prefix(5)) { appliance in
-                                    NavigationLink { ApplianceDetailView(appliance: appliance) } label: {
-                                        AssetRow(appliance: appliance)
+                                ForEach(portfolio.items.prefix(5)) { snapshot in
+                                    NavigationLink { ApplianceDetailView(appliance: snapshot.appliance) } label: {
+                                        AssetRow(snapshot: snapshot)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -489,9 +469,9 @@ struct VaultModePanel: View {
     let mode: VaultHomeMode
     let reserve: Double
     let totalValue: Double
-    let claimsDue: [Appliance]
-    let serviceDue: [Appliance]
-    let attention: [Appliance]
+    let claimsDue: [ApplianceSnapshot]
+    let serviceDue: [ApplianceSnapshot]
+    let attention: [ApplianceSnapshot]
     let scan: () -> Void
 
     var body: some View {
@@ -510,15 +490,15 @@ struct VaultModePanel: View {
             case .exposure:
                 VStack(alignment: .leading, spacing: 10) {
                     GlassSectionHeader(title: "Exposure map", caption: "\(attention.count) signals")
-                    ForEach(attention.prefix(3)) { appliance in
+                    ForEach(attention.prefix(3)) { snapshot in
                         HStack(spacing: 10) {
-                            GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor, size: 38)
-                            Text(appliance.name)
+                            GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor, size: 38)
+                            Text(snapshot.name)
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
                             Spacer()
-                            MeterBar(value: appliance.riskScore, tint: appliance.signalColor)
+                            MeterBar(value: snapshot.riskScore, tint: snapshot.signalColor)
                                 .frame(width: 92)
                         }
                     }
@@ -688,84 +668,84 @@ struct ReserveCard: View {
 }
 
 struct AttentionCard: View {
-    let appliance: Appliance
+    let snapshot: ApplianceSnapshot
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor)
+                GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor)
                 Spacer()
-                Text(appliance.riskScore, format: .percent.precision(.fractionLength(0)))
+                Text(snapshot.riskScore, format: .percent.precision(.fractionLength(0)))
                     .font(.caption.weight(.black))
-                    .foregroundStyle(appliance.signalColor)
+                    .foregroundStyle(snapshot.signalColor)
             }
-            Text(appliance.name)
+            Text(snapshot.name)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
-            Text(appliance.lifecycleStage)
+            Text(snapshot.lifecycleStage)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.5))
             Spacer(minLength: 0)
-            MeterBar(value: appliance.riskScore, tint: appliance.signalColor)
+            MeterBar(value: snapshot.riskScore, tint: snapshot.signalColor)
         }
         .frame(width: 168, height: 168, alignment: .topLeading)
-        .glassCard(22, padding: 16, tint: appliance.signalColor)
+        .glassCard(22, padding: 16, tint: snapshot.signalColor)
     }
 }
 
 struct AssetRow: View {
-    let appliance: Appliance
+    let snapshot: ApplianceSnapshot
 
     var body: some View {
         HStack(spacing: 14) {
-            GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor, size: 46)
+            GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor, size: 46)
             VStack(alignment: .leading, spacing: 4) {
-                Text(appliance.name)
+                Text(snapshot.name)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.white)
-                Text("\(appliance.displayBrand) · \(appliance.ageLabel)")
+                Text("\(snapshot.displayBrand) · \(snapshot.ageLabel)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.55))
-                MeterBar(value: appliance.healthScore, tint: VaultTheme.accent, height: 5)
+                MeterBar(value: snapshot.healthScore, tint: VaultTheme.accent, height: 5)
                     .frame(width: 120)
             }
             Spacer(minLength: 0)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(appliance.lifecycleStage.uppercased())
+                Text(snapshot.lifecycleStage.uppercased())
                     .font(.caption2.weight(.heavy))
                     .foregroundStyle(.black)
                     .padding(.vertical, 4).padding(.horizontal, 8)
-                    .background(appliance.signalColor, in: Capsule())
-                Text(appliance.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
+                    .background(snapshot.signalColor, in: Capsule())
+                Text(snapshot.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.white.opacity(0.55))
             }
         }
         .glassCard(22, padding: 14)
-        .interactiveLift(tint: appliance.signalColor)
+        .interactiveLift(tint: snapshot.signalColor)
     }
 }
 
 struct AssetMatrixCard: View {
-    let appliance: Appliance
+    let snapshot: ApplianceSnapshot
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor, size: 42)
+                GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor, size: 42)
                 Spacer()
-                Text(appliance.riskScore, format: .percent.precision(.fractionLength(0)))
+                Text(snapshot.riskScore, format: .percent.precision(.fractionLength(0)))
                     .font(.caption.weight(.black))
-                    .foregroundStyle(appliance.signalColor)
+                    .foregroundStyle(snapshot.signalColor)
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(appliance.name)
+                Text(snapshot.name)
                     .font(.subheadline.weight(.black))
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                Text(appliance.displayBrand)
+                Text(snapshot.displayBrand)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.white.opacity(0.52))
                     .lineLimit(1)
@@ -773,20 +753,20 @@ struct AssetMatrixCard: View {
 
             Spacer(minLength: 0)
 
-            MeterBar(value: appliance.healthScore, tint: healthColor(appliance.healthScore), height: 6)
+            MeterBar(value: snapshot.healthScore, tint: healthColor(snapshot.healthScore), height: 6)
             HStack {
-                Text(appliance.lifecycleStage.uppercased())
+                Text(snapshot.lifecycleStage.uppercased())
                     .font(.system(size: 8, weight: .heavy))
                     .foregroundStyle(.white.opacity(0.52))
                 Spacer()
-                Text(appliance.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
+                Text(snapshot.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
                     .font(.caption2.weight(.black))
                     .foregroundStyle(.white)
             }
         }
         .frame(height: 166)
-        .glassCard(24, padding: 15, tint: appliance.signalColor)
-        .interactiveLift(tint: appliance.signalColor)
+        .glassCard(24, padding: 15, tint: snapshot.signalColor)
+        .interactiveLift(tint: snapshot.signalColor)
     }
 }
 
@@ -803,20 +783,9 @@ struct AssetsView: View {
     @State private var sort = ApplianceSortMode.risk
     @State private var displayMode = AssetDisplayMode.deck
 
-    private var results: [Appliance] {
-        appliances.filter { appliance in
-            (search.isEmpty
-                || appliance.name.localizedCaseInsensitiveContains(search)
-                || appliance.brand.localizedCaseInsensitiveContains(search)
-                || appliance.modelNumber.localizedCaseInsensitiveContains(search)
-                || appliance.category.title.localizedCaseInsensitiveContains(search))
-            && (category == nil || appliance.category == category)
-            && passes(appliance)
-        }
-        .sorted(by: ordering)
-    }
-
     var body: some View {
+        let results = filteredResults(from: appliances.map { ApplianceSnapshot($0) })
+
         NavigationStack {
             ZStack {
                 VaultBackground()
@@ -834,14 +803,14 @@ struct AssetsView: View {
                                 .padding(.top, 14)
                         } else if displayMode == .deck {
                             LazyVStack(spacing: 10) {
-                                ForEach(results) { appliance in
-                                    NavigationLink { ApplianceDetailView(appliance: appliance) } label: {
-                                        AssetRow(appliance: appliance)
+                                ForEach(results) { snapshot in
+                                    NavigationLink { ApplianceDetailView(appliance: snapshot.appliance) } label: {
+                                        AssetRow(snapshot: snapshot)
                                     }
                                     .buttonStyle(.plain)
                                     .contextMenu {
                                         Button(role: .destructive) {
-                                            withAnimation { modelContext.delete(appliance) }
+                                            withAnimation { modelContext.delete(snapshot.appliance) }
                                         } label: { Label("Delete", systemImage: "trash") }
                                     }
                                 }
@@ -851,14 +820,14 @@ struct AssetsView: View {
                                 GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)
                             ], spacing: 12) {
-                                ForEach(results) { appliance in
-                                    NavigationLink { ApplianceDetailView(appliance: appliance) } label: {
-                                        AssetMatrixCard(appliance: appliance)
+                                ForEach(results) { snapshot in
+                                    NavigationLink { ApplianceDetailView(appliance: snapshot.appliance) } label: {
+                                        AssetMatrixCard(snapshot: snapshot)
                                     }
                                     .buttonStyle(.plain)
                                     .contextMenu {
                                         Button(role: .destructive) {
-                                            withAnimation { modelContext.delete(appliance) }
+                                            withAnimation { modelContext.delete(snapshot.appliance) }
                                         } label: { Label("Delete", systemImage: "trash") }
                                     }
                                 }
@@ -881,17 +850,31 @@ struct AssetsView: View {
         }
     }
 
-    private func passes(_ appliance: Appliance) -> Bool {
+    private func filteredResults(from snapshots: [ApplianceSnapshot]) -> [ApplianceSnapshot] {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return snapshots.filter { snapshot in
+            (query.isEmpty
+                || snapshot.name.lowercased().contains(query)
+                || snapshot.brand.lowercased().contains(query)
+                || snapshot.modelNumber.lowercased().contains(query)
+                || snapshot.category.title.lowercased().contains(query))
+            && (category == nil || snapshot.category == category)
+            && passes(snapshot)
+        }
+        .sorted(by: ordering)
+    }
+
+    private func passes(_ snapshot: ApplianceSnapshot) -> Bool {
         switch filter {
         case .all: true
-        case .protected: appliance.status == .protected
-        case .attention: appliance.status == .inspectSoon || appliance.status == .aging || appliance.shouldReviewRepairVsReplace
-        case .replace: appliance.status == .planReplacement
-        case .uninsured: appliance.activeWarranties.isEmpty
+        case .protected: snapshot.status == .protected
+        case .attention: snapshot.status == .inspectSoon || snapshot.status == .aging || snapshot.shouldReviewRepairVsReplace
+        case .replace: snapshot.status == .planReplacement
+        case .uninsured: snapshot.activeWarranties.isEmpty
         }
     }
 
-    private func ordering(_ lhs: Appliance, _ rhs: Appliance) -> Bool {
+    private func ordering(_ lhs: ApplianceSnapshot, _ rhs: ApplianceSnapshot) -> Bool {
         switch sort {
         case .risk: lhs.riskScore > rhs.riskScore
         case .value: lhs.replacementBudgetTarget > rhs.replacementBudgetTarget
@@ -995,46 +978,54 @@ struct CategoryChip: View {
 struct ForecastView: View {
     @Query private var appliances: [Appliance]
 
-    private struct YearPoint: Identifiable { let id = UUID(); let year: Int; let amount: Double }
+    private struct ForecastSnapshot {
+        let fiveYearBudget: Double
+        let horizonNodes: [EventHorizon.Node]
+        let maxCost: Double
+        let urgent: Int
+        let nextYear: [ApplianceSnapshot]
+        let nextThreeYears: [ApplianceSnapshot]
+        let nextFiveYears: [ApplianceSnapshot]
 
-    private var points: [YearPoint] {
-        let thisYear = Calendar.current.component(.year, from: .now)
-        return (0..<6).map { offset in
-            let year = thisYear + offset
-            let amount = appliances
-                .filter { Calendar.current.component(.year, from: $0.expectedEndOfLifeDate) == year }
-                .reduce(0) { $0 + $1.replacementBudgetTarget }
-            return YearPoint(year: year, amount: amount)
+        init(appliances: [Appliance], now: Date = .now, calendar: Calendar = .current) {
+            let snapshots = appliances.map { ApplianceSnapshot($0, now: now, calendar: calendar) }
+            let thisYear = calendar.component(.year, from: now)
+            let lastYear = thisYear + 5
+            fiveYearBudget = snapshots.reduce(0) { total, snapshot in
+                let replacementYear = calendar.component(.year, from: snapshot.expectedEndOfLifeDate)
+                return replacementYear >= thisYear && replacementYear <= lastYear
+                    ? total + snapshot.replacementBudgetTarget
+                    : total
+            }
+            maxCost = max(1, snapshots.map(\.replacementBudgetTarget).max() ?? 1)
+            horizonNodes = snapshots.enumerated().map { index, snapshot in
+                let years = snapshot.expectedEndOfLifeDate.timeIntervalSince(now) / (365.25 * 24 * 3600)
+                return EventHorizon.Node(
+                    id: snapshot.id,
+                    years: max(0.1, years),
+                    cost: snapshot.replacementBudgetTarget,
+                    color: snapshot.signalColor,
+                    angle: Double(index) * 2.399963  // golden angle for organic spread
+                )
+            }
+
+            func upcoming(within years: Int) -> [ApplianceSnapshot] {
+                let cutoff = calendar.date(byAdding: .year, value: years, to: now) ?? now
+                return snapshots
+                    .filter { $0.expectedEndOfLifeDate <= cutoff }
+                    .sorted { $0.expectedEndOfLifeDate < $1.expectedEndOfLifeDate }
+            }
+
+            nextYear = upcoming(within: 1)
+            nextThreeYears = upcoming(within: 3)
+            nextFiveYears = upcoming(within: 5)
+            urgent = nextYear.count
         }
-    }
-
-    private var fiveYearBudget: Double { points.reduce(0) { $0 + $1.amount } }
-
-    private var horizonNodes: [EventHorizon.Node] {
-        appliances.enumerated().map { index, appliance in
-            let years = appliance.expectedEndOfLifeDate.timeIntervalSinceNow / (365.25 * 24 * 3600)
-            return EventHorizon.Node(
-                years: max(0.1, years),
-                cost: appliance.replacementBudgetTarget,
-                color: appliance.signalColor,
-                angle: Double(index) * 2.399963  // golden angle for organic spread
-            )
-        }
-    }
-
-    private var maxCost: Double { max(1, appliances.map(\.replacementBudgetTarget).max() ?? 1) }
-    private var urgent: Int {
-        let cutoff = Calendar.current.date(byAdding: .year, value: 1, to: .now) ?? .now
-        return appliances.filter { $0.expectedEndOfLifeDate <= cutoff }.count
-    }
-
-    private func upcoming(within years: Int) -> [Appliance] {
-        let cutoff = Calendar.current.date(byAdding: .year, value: years, to: .now) ?? .now
-        return appliances.filter { $0.expectedEndOfLifeDate <= cutoff }
-            .sorted { $0.expectedEndOfLifeDate < $1.expectedEndOfLifeDate }
     }
 
     var body: some View {
+        let forecast = ForecastSnapshot(appliances: appliances)
+
         NavigationStack {
             ZStack {
                 VaultBackground()
@@ -1042,23 +1033,23 @@ struct ForecastView: View {
                     VStack(spacing: 18) {
                         VStack(alignment: .leading, spacing: 14) {
                             Eyebrow("6-year replacement budget", tint: VaultTheme.cyan)
-                            Text(fiveYearBudget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
+                            Text(forecast.fiveYearBudget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
                                 .font(.system(size: 40, weight: .black, design: .rounded))
                                 .foregroundStyle(.white)
                                 .minimumScaleFactor(0.6).lineLimit(1)
-                            Text("\(urgent) asset\(urgent == 1 ? "" : "s") likely to need replacing within 12 months")
+                            Text("\(forecast.urgent) asset\(forecast.urgent == 1 ? "" : "s") likely to need replacing within 12 months")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.white.opacity(0.55))
 
-                            EventHorizon(nodes: horizonNodes, maxYears: 6, maxCost: maxCost)
+                            EventHorizon(nodes: forecast.horizonNodes, maxYears: 6, maxCost: forecast.maxCost)
                                 .frame(height: 300)
                                 .padding(.top, 4)
                         }
                         .glassCard(padding: 20)
 
-                        ForecastBucket(title: "Next 12 months", items: upcoming(within: 1))
-                        ForecastBucket(title: "Next 3 years", items: upcoming(within: 3))
-                        ForecastBucket(title: "Next 5 years", items: upcoming(within: 5))
+                        ForecastBucket(title: "Next 12 months", items: forecast.nextYear)
+                        ForecastBucket(title: "Next 3 years", items: forecast.nextThreeYears)
+                        ForecastBucket(title: "Next 5 years", items: forecast.nextFiveYears)
                     }
                     .padding(18)
                     .safeAreaPadding(.bottom, 94)
@@ -1072,7 +1063,7 @@ struct ForecastView: View {
 
 struct ForecastBucket: View {
     let title: String
-    let items: [Appliance]
+    let items: [ApplianceSnapshot]
 
     private var total: Double { items.reduce(0) { $0 + $1.replacementBudgetTarget } }
 
@@ -1090,16 +1081,16 @@ struct ForecastBucket: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .glassCard(20, padding: 16)
             } else {
-                ForEach(items) { appliance in
+                ForEach(items) { snapshot in
                     HStack(spacing: 12) {
-                        GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor)
+                        GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(appliance.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                            Text(appliance.expectedEndOfLifeDate.formatted(date: .abbreviated, time: .omitted))
+                            Text(snapshot.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            Text(snapshot.expectedEndOfLifeDate.formatted(date: .abbreviated, time: .omitted))
                                 .font(.caption).foregroundStyle(.white.opacity(0.5))
                         }
                         Spacer()
-                        Text(appliance.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
+                        Text(snapshot.replacementBudgetTarget, format: .currency(code: vaultCurrencyCode).precision(.fractionLength(0)))
                             .font(.caption.weight(.bold)).foregroundStyle(.white)
                     }
                     .glassCard(20, padding: 14)
@@ -1128,8 +1119,9 @@ enum VaultChatBrain {
             return "I am ready to analyze your vault. Add or scan an appliance and I will start ranking risk, warranty exposure, resale value, and replacement planning."
         }
 
-        let totalValue = appliances.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
-        let highestRisk = appliances.max { $0.riskScore < $1.riskScore }
+        let snapshots = appliances.map { ApplianceSnapshot($0) }
+        let totalValue = snapshots.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
+        let highestRisk = snapshots.max { $0.riskScore < $1.riskScore }
         let name = highestRisk?.name ?? "your portfolio"
         let risk = highestRisk?.riskScore.formatted(.percent.precision(.fractionLength(0))) ?? "0%"
         return "I scanned \(appliances.count) asset\(appliances.count == 1 ? "" : "s") worth about \(totalValue.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0)))). Highest live signal: \(name) at \(risk) risk."
@@ -1141,17 +1133,18 @@ enum VaultChatBrain {
         }
 
         let lower = prompt.lowercased()
+        let snapshots = appliances.map { ApplianceSnapshot($0) }
 
         if lower.contains("risk") || lower.contains("fail") || lower.contains("attention") || lower.contains("urgent") {
-            let ranked = appliances.sorted { $0.riskScore > $1.riskScore }.prefix(3)
-            let lines = ranked.map { appliance in
-                "\(appliance.name): \(appliance.riskScore.formatted(.percent.precision(.fractionLength(0)))) risk, \(appliance.lifecycleStage.lowercased()) stage"
+            let ranked = snapshots.sorted { $0.riskScore > $1.riskScore }.prefix(3)
+            let lines = ranked.map { snapshot in
+                "\(snapshot.name): \(snapshot.riskScore.formatted(.percent.precision(.fractionLength(0)))) risk, \(snapshot.lifecycleStage.lowercased()) stage"
             }
             return "Top risk signals:\n" + lines.joined(separator: "\n") + "\nI would inspect the first item before spending on lower-risk assets."
         }
 
         if lower.contains("warranty") || lower.contains("claim") || lower.contains("expire") {
-            let expiring = appliances
+            let expiring = snapshots
                 .filter { $0.nextWarrantyExpiration != nil }
                 .sorted { ($0.daysUntilWarrantyExpires ?? .max) < ($1.daysUntilWarrantyExpires ?? .max) }
                 .prefix(3)
@@ -1160,39 +1153,39 @@ enum VaultChatBrain {
                 return "I do not see active warranty dates in the vault. Add warranty records to unlock claim-window alerts and expiry ranking."
             }
 
-            let lines = expiring.map { appliance in
-                let days = appliance.daysUntilWarrantyExpires ?? 0
-                return "\(appliance.name): \(days)d remaining"
+            let lines = expiring.map { snapshot in
+                let days = snapshot.daysUntilWarrantyExpires ?? 0
+                return "\(snapshot.name): \(days)d remaining"
             }
             return "Warranty watchlist:\n" + lines.joined(separator: "\n") + "\nAnything under 30 days should be checked for eligible claims now."
         }
 
         if lower.contains("save") || lower.contains("budget") || lower.contains("replace") || lower.contains("money") {
-            let target = appliances.max { $0.monthlyReplacementSavingsTarget < $1.monthlyReplacementSavingsTarget }
+            let target = snapshots.max { $0.monthlyReplacementSavingsTarget < $1.monthlyReplacementSavingsTarget }
             guard let target else { return "I need at least one replacement target before I can calculate a reserve plan." }
             return "Start funding \(target.name). Replacement target is \(target.replacementBudgetTarget.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0)))) and the current monthly reserve target is \(target.monthlyReplacementSavingsTarget.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0))))."
         }
 
         if lower.contains("service") || lower.contains("maintenance") || lower.contains("repair") {
-            let due = appliances
+            let due = snapshots
                 .sorted { $0.nextMaintenanceDate < $1.nextMaintenanceDate }
                 .prefix(3)
-            let lines = due.map { appliance in
-                "\(appliance.name): \(appliance.nextMaintenanceDate.formatted(date: .abbreviated, time: .omitted))"
+            let lines = due.map { snapshot in
+                "\(snapshot.name): \(snapshot.nextMaintenanceDate.formatted(date: .abbreviated, time: .omitted))"
             }
             return "Service queue:\n" + lines.joined(separator: "\n") + "\nLog each visit so reliability and repair-vs-replace signals stay accurate."
         }
 
         if lower.contains("resale") || lower.contains("sell") || lower.contains("value") {
-            let ranked = appliances.sorted { $0.estimatedResaleValue > $1.estimatedResaleValue }.prefix(3)
-            let lines = ranked.map { appliance in
-                "\(appliance.name): \(appliance.estimatedResaleValue.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0)))) estimated resale"
+            let ranked = snapshots.sorted { $0.estimatedResaleValue > $1.estimatedResaleValue }.prefix(3)
+            let lines = ranked.map { snapshot in
+                "\(snapshot.name): \(snapshot.estimatedResaleValue.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0)))) estimated resale"
             }
             return "Best resale candidates:\n" + lines.joined(separator: "\n") + "\nKeep serials, invoices, and service records attached before selling."
         }
 
-        let averageRisk = appliances.reduce(0) { $0 + $1.riskScore } / Double(appliances.count)
-        let activeWarranties = appliances.filter { !$0.activeWarranties.isEmpty }.count
+        let averageRisk = snapshots.reduce(0) { $0 + $1.riskScore } / Double(snapshots.count)
+        let activeWarranties = snapshots.filter { !$0.activeWarranties.isEmpty }.count
         return "Portfolio readout: \(appliances.count) assets, \(activeWarranties) with active warranty coverage, average risk \(averageRisk.formatted(.percent.precision(.fractionLength(0)))). Ask me about risk, warranty, service, resale, or budget and I will drill in."
     }
 }
@@ -1201,7 +1194,6 @@ struct InsightsView: View {
     @Query private var appliances: [Appliance]
     @State private var messages: [VaultChatMessage] = []
     @State private var draft = ""
-    @State private var isThinking = false
 
     private let suggestions = [
         "What needs attention?",
@@ -1230,10 +1222,6 @@ struct InsightsView: View {
                                             .id(message.id)
                                     }
 
-                                    if isThinking {
-                                        TypingBubble()
-                                            .id("typing")
-                                    }
                                 }
                             }
                             .padding(18)
@@ -1246,15 +1234,9 @@ struct InsightsView: View {
                                 proxy.scrollTo(last.id, anchor: .bottom)
                             }
                         }
-                        .onChange(of: isThinking) { _, thinking in
-                            guard thinking else { return }
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.86)) {
-                                proxy.scrollTo("typing", anchor: .bottom)
-                            }
-                        }
                     }
 
-                    VaultChatComposer(text: $draft, disabled: isThinking, send: sendDraft)
+                    VaultChatComposer(text: $draft, disabled: false, send: sendDraft)
                         .padding(.horizontal, 14)
                         .padding(.bottom, 92)
                 }
@@ -1280,20 +1262,11 @@ struct InsightsView: View {
 
     private func send(_ rawPrompt: String) {
         let prompt = rawPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, !isThinking else { return }
+        guard !prompt.isEmpty else { return }
 
         draft = ""
         messages.append(VaultChatMessage(role: .user, text: prompt))
-        isThinking = true
-
-        Task {
-            try? await Task.sleep(for: .milliseconds(650))
-            let answer = VaultChatBrain.answer(prompt, appliances: appliances)
-            await MainActor.run {
-                messages.append(VaultChatMessage(role: .assistant, text: answer))
-                isThinking = false
-            }
-        }
+        messages.append(VaultChatMessage(role: .assistant, text: VaultChatBrain.answer(prompt, appliances: appliances)))
     }
 }
 
@@ -1500,18 +1473,20 @@ struct ReportsView: View {
     @Query(sort: \Appliance.purchaseDate, order: .reverse) private var appliances: [Appliance]
     @State private var exportURL: URL?
     @State private var showShare = false
-
-    private var totalValue: Double { appliances.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) } }
-    private var docCoverage: Double {
-        guard !appliances.isEmpty else { return 0 }
-        return Double(appliances.filter { !$0.invoiceReference.isEmpty || !$0.warrantyDocumentReference.isEmpty }.count) / Double(appliances.count)
-    }
-    private var serialCoverage: Double {
-        guard !appliances.isEmpty else { return 0 }
-        return Double(appliances.filter { !$0.serialNumber.isEmpty }.count) / Double(appliances.count)
-    }
+    @State private var isExporting = false
 
     var body: some View {
+        let snapshots = appliances.map { ApplianceSnapshot($0) }
+        let totalValue = snapshots.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
+        let docCoverage = snapshots.isEmpty ? 0 : Double(snapshots.filter {
+            !$0.invoiceReference.isEmpty || !$0.warrantyDocumentReference.isEmpty
+        }.count) / Double(snapshots.count)
+        let serialCoverage = snapshots.isEmpty ? 0 : Double(snapshots.filter {
+            !$0.serialNumber.isEmpty
+        }.count) / Double(snapshots.count)
+        let householdCount = Set(snapshots.map(\.householdName)).count
+        let activeWarrantyCount = snapshots.filter { !$0.activeWarranties.isEmpty }.count
+
         NavigationStack {
             ZStack {
                 VaultBackground()
@@ -1531,7 +1506,7 @@ struct ReportsView: View {
                         .glassCard(padding: 20)
 
                         VStack(alignment: .leading, spacing: 12) {
-                            GlassSectionHeader(title: "Export dossier", caption: "PDF")
+                            GlassSectionHeader(title: "Export dossier", caption: isExporting ? "building" : "PDF")
                             ExportButton(title: "Household appliance report",
                                          subtitle: "Full inventory with warranty & value.",
                                          symbol: "house.fill") {
@@ -1548,14 +1523,14 @@ struct ReportsView: View {
                                 generate(title: "Home Sale Handover Pack", subtitle: "Appliance ownership and maintenance history for the new owner.")
                             }
                         }
-                        .disabled(appliances.isEmpty)
-                        .opacity(appliances.isEmpty ? 0.45 : 1)
+                        .disabled(appliances.isEmpty || isExporting)
+                        .opacity(appliances.isEmpty || isExporting ? 0.45 : 1)
 
                         VStack(alignment: .leading, spacing: 12) {
                             GlassSectionHeader(title: "Snapshot")
                             SnapshotRow(label: "Tracked appliances", value: "\(appliances.count)")
-                            SnapshotRow(label: "Households", value: "\(Set(appliances.map(\.householdName)).count)")
-                            SnapshotRow(label: "Active warranties", value: "\(appliances.filter { !$0.activeWarranties.isEmpty }.count)")
+                            SnapshotRow(label: "Households", value: "\(householdCount)")
+                            SnapshotRow(label: "Active warranties", value: "\(activeWarrantyCount)")
                         }
                     }
                     .padding(18)
@@ -1570,11 +1545,24 @@ struct ReportsView: View {
         }
     }
 
+    @MainActor
     private func generate(title: String, subtitle: String) {
-        guard !appliances.isEmpty,
-              let url = VaultPDF.dossier(title: title, subtitle: subtitle, appliances: appliances) else { return }
-        exportURL = url
-        showShare = true
+        guard !appliances.isEmpty, !isExporting else { return }
+        let items = appliances
+            .map { ApplianceSnapshot($0) }
+            .map { VaultPDF.DossierItem(snapshot: $0) }
+        let currencyCode = vaultCurrencyCode
+
+        isExporting = true
+        Task {
+            let url = await Task.detached(priority: .userInitiated) {
+                VaultPDF.dossier(title: title, subtitle: subtitle, items: items, currencyCode: currencyCode)
+            }.value
+            isExporting = false
+            guard let url else { return }
+            exportURL = url
+            showShare = true
+        }
     }
 }
 
@@ -1790,6 +1778,10 @@ struct SettingsSheet: View {
     @State private var iconStore = AppIconStore.shared
 
     var body: some View {
+        let snapshots = appliances.map { ApplianceSnapshot($0) }
+        let householdCount = Set(snapshots.map(\.householdName)).count
+        let activeWarrantyCount = snapshots.filter { !$0.activeWarranties.isEmpty }.count
+
         NavigationStack {
             ZStack {
                 VaultBackground()
@@ -1847,8 +1839,8 @@ struct SettingsSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             GlassSectionHeader(title: "Household graph")
                             SnapshotRow(label: "Appliances", value: "\(appliances.count)")
-                            SnapshotRow(label: "Households", value: "\(Set(appliances.map(\.householdName)).count)")
-                            SnapshotRow(label: "Active warranties", value: "\(appliances.filter { !$0.activeWarranties.isEmpty }.count)")
+                            SnapshotRow(label: "Households", value: "\(householdCount)")
+                            SnapshotRow(label: "Active warranties", value: "\(activeWarrantyCount)")
 
                             if appliances.isEmpty {
                                 Button {
@@ -1900,12 +1892,14 @@ struct ApplianceDetailView: View {
     private var services: [ServiceLog] { appliance.serviceLogs.sorted { $0.serviceDate > $1.serviceDate } }
 
     var body: some View {
+        let snapshot = ApplianceSnapshot(appliance)
+
         ZStack {
             VaultBackground()
           GeometryReader { geo in
             ScrollView {
                 VStack(spacing: 16) {
-                    DetailHeader(appliance: appliance)
+                    DetailHeader(snapshot: snapshot)
                     DetailModeSwitch(selection: $detailMode)
 
                     Group {
@@ -1913,25 +1907,25 @@ struct ApplianceDetailView: View {
                         case .signals:
                             VStack(spacing: 16) {
                                 HStack(spacing: 12) {
-                                    GaugeTile(title: "Risk", value: appliance.riskScore, symbol: "waveform.path.ecg", tint: appliance.signalColor)
-                                    GaugeTile(title: "Reliability", value: appliance.reliabilityScore, symbol: "checkmark.seal.fill", tint: VaultTheme.cyan)
+                                    GaugeTile(title: "Risk", value: snapshot.riskScore, symbol: "waveform.path.ecg", tint: snapshot.signalColor)
+                                    GaugeTile(title: "Reliability", value: snapshot.reliabilityScore, symbol: "checkmark.seal.fill", tint: VaultTheme.cyan)
                                 }
 
                                 HStack(spacing: 12) {
-                                    DetailMetric(title: "Monthly reserve", value: appliance.monthlyReplacementSavingsTarget.formatted(.currency(code: vaultCurrencyCode)))
-                                    DetailMetric(title: "Resale value", value: appliance.estimatedResaleValue.formatted(.currency(code: vaultCurrencyCode)))
+                                    DetailMetric(title: "Monthly reserve", value: snapshot.monthlyReplacementSavingsTarget.formatted(.currency(code: vaultCurrencyCode)))
+                                    DetailMetric(title: "Resale value", value: snapshot.estimatedResaleValue.formatted(.currency(code: vaultCurrencyCode)))
                                 }
 
-                                DiagnosticCard(appliance: appliance)
+                                DiagnosticCard(snapshot: snapshot)
 
                                 VStack(alignment: .leading, spacing: 12) {
                                     GlassSectionHeader(title: "Lifecycle")
-                                    TimelineRow(title: "Purchased", date: appliance.purchaseDate, symbol: "cart.fill", tint: VaultTheme.accent, active: true)
-                                    TimelineRow(title: "Next maintenance", date: appliance.nextMaintenanceDate, symbol: "wrench.adjustable.fill", tint: VaultTheme.cyan, active: appliance.nextMaintenanceDate <= .now)
-                                    if let warranty = appliance.nextWarrantyExpiration {
-                                        TimelineRow(title: "Warranty expires", date: warranty, symbol: "shield.lefthalf.filled", tint: VaultTheme.warn, active: (appliance.daysUntilWarrantyExpires ?? 999) <= 90)
+                                    TimelineRow(title: "Purchased", date: snapshot.purchaseDate, symbol: "cart.fill", tint: VaultTheme.accent, active: true)
+                                    TimelineRow(title: "Next maintenance", date: snapshot.nextMaintenanceDate, symbol: "wrench.adjustable.fill", tint: VaultTheme.cyan, active: snapshot.nextMaintenanceDate <= .now)
+                                    if let warranty = snapshot.nextWarrantyExpiration {
+                                        TimelineRow(title: "Warranty expires", date: warranty, symbol: "shield.lefthalf.filled", tint: VaultTheme.warn, active: (snapshot.daysUntilWarrantyExpires ?? 999) <= 90)
                                     }
-                                    TimelineRow(title: "Expected replacement", date: appliance.expectedEndOfLifeDate, symbol: "calendar.badge.clock", tint: VaultTheme.danger, active: appliance.healthScore < 0.3)
+                                    TimelineRow(title: "Expected replacement", date: snapshot.expectedEndOfLifeDate, symbol: "calendar.badge.clock", tint: VaultTheme.danger, active: snapshot.healthScore < 0.3)
                                 }
                             }
                         case .identity:
@@ -2010,16 +2004,16 @@ struct DetailModeSwitch: View {
 }
 
 struct DiagnosticCard: View {
-    let appliance: Appliance
+    let snapshot: ApplianceSnapshot
 
     private var verdict: String {
-        if appliance.shouldReviewRepairVsReplace {
+        if snapshot.shouldReviewRepairVsReplace {
             return "Repair spend has crossed the review threshold. Compare one more repair quote against replacement."
         }
-        if appliance.riskScore > 0.55 {
+        if snapshot.riskScore > 0.55 {
             return "Risk is elevated. Prioritize warranty checks, maintenance, and reserve planning."
         }
-        if appliance.activeWarranties.isEmpty {
+        if snapshot.activeWarranties.isEmpty {
             return "No active warranty is attached. Add proof of coverage or mark this as self-insured."
         }
         return "Signals are stable. Keep service history current to preserve resale and claim readiness."
@@ -2027,39 +2021,39 @@ struct DiagnosticCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            GlyphBadge(symbol: "brain.head.profile", tint: appliance.signalColor)
+            GlyphBadge(symbol: "brain.head.profile", tint: snapshot.signalColor)
             VStack(alignment: .leading, spacing: 7) {
-                Eyebrow("Vault diagnosis", tint: appliance.signalColor)
+                Eyebrow("Vault diagnosis", tint: snapshot.signalColor)
                 Text(verdict)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.66))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .glassCard(22, padding: 16, tint: appliance.signalColor)
+        .glassCard(22, padding: 16, tint: snapshot.signalColor)
     }
 }
 
 struct DetailHeader: View {
-    let appliance: Appliance
+    let snapshot: ApplianceSnapshot
 
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 14) {
-                GlyphBadge(symbol: appliance.category.symbol, tint: appliance.signalColor, size: 56)
+                GlyphBadge(symbol: snapshot.category.symbol, tint: snapshot.signalColor, size: 56)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(appliance.name).font(.title3.weight(.bold)).foregroundStyle(.white).lineLimit(2)
-                    Text("\(appliance.displayBrand) · \(appliance.ageLabel)")
+                    Text(snapshot.name).font(.title3.weight(.bold)).foregroundStyle(.white).lineLimit(2)
+                    Text("\(snapshot.displayBrand) · \(snapshot.ageLabel)")
                         .font(.subheadline).foregroundStyle(.white.opacity(0.55))
                 }
                 Spacer()
             }
             HStack(spacing: 18) {
-                LiquidGauge(value: appliance.healthScore, tint: appliance.signalColor, size: 96)
+                LiquidGauge(value: snapshot.healthScore, tint: snapshot.signalColor, size: 96)
                 VStack(alignment: .leading, spacing: 10) {
-                    StatChip(label: "Stage", value: appliance.lifecycleStage, tint: appliance.signalColor)
-                    StatChip(label: "Value", value: appliance.replacementBudgetTarget.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0))), tint: VaultTheme.cyan)
-                    if let days = appliance.daysUntilWarrantyExpires {
+                    StatChip(label: "Stage", value: snapshot.lifecycleStage, tint: snapshot.signalColor)
+                    StatChip(label: "Value", value: snapshot.replacementBudgetTarget.formatted(.currency(code: vaultCurrencyCode).precision(.fractionLength(0))), tint: VaultTheme.cyan)
+                    if let days = snapshot.daysUntilWarrantyExpires {
                         StatChip(label: "Warranty", value: days > 0 ? "\(days)d" : "expired", tint: VaultTheme.warn)
                     }
                 }

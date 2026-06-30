@@ -26,9 +26,10 @@ struct VaultifyApp: App {
     }()
 
     // Launch-argument controls used for demos and deterministic screenshot capture.
-    // e.g. `-VaultDemoSeed YES -VaultSkipBoot YES -VaultInitialTab forecast`
+    // e.g. `-VaultDemoSeed YES -VaultShowBoot YES -VaultInitialTab forecast`
     private var wantsDemoSeed: Bool { UserDefaults.standard.bool(forKey: "VaultDemoSeed") }
     private var skipBoot: Bool { UserDefaults.standard.bool(forKey: "VaultSkipBoot") }
+    private var showBoot: Bool { UserDefaults.standard.bool(forKey: "VaultShowBoot") && !skipBoot }
 
     @State private var booted = false
 
@@ -37,7 +38,7 @@ struct VaultifyApp: App {
             ZStack {
                 ContentView()
 
-                if !booted {
+                if showBoot && !booted {
                     VaultBootView()
                         .transition(.opacity)
                         .zIndex(1)
@@ -47,11 +48,11 @@ struct VaultifyApp: App {
                 if wantsDemoSeed {
                     DemoVault.seedIfEmpty(sharedModelContainer.mainContext)
                 }
-                if skipBoot {
+                if !showBoot {
                     booted = true
                 } else {
-                    try? await Task.sleep(for: .seconds(3.4))
-                    withAnimation(.easeOut(duration: 0.6)) { booted = true }
+                    try? await Task.sleep(for: .milliseconds(450))
+                    withAnimation(.easeOut(duration: 0.18)) { booted = true }
                 }
             }
         }

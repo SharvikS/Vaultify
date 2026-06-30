@@ -368,6 +368,177 @@ extension Appliance {
     }
 }
 
+/// Immutable per-render appliance metrics. Aggregate screens build these once
+/// and reuse them for filtering, sorting, totals, and row rendering.
+struct ApplianceSnapshot: Identifiable {
+    let appliance: Appliance
+    let id: String
+
+    let name: String
+    let brand: String
+    let modelNumber: String
+    let serialNumber: String
+    let householdName: String
+    let category: ApplianceCategory
+    let displayBrand: String
+    let purchaseDate: Date
+    let purchasePrice: Double
+    let estimatedReplacementCost: Double
+    let invoiceReference: String
+    let warrantyDocumentReference: String
+
+    let replacementBudgetTarget: Double
+    let ageInYears: Double
+    let ageLabel: String
+    let expectedEndOfLifeDate: Date
+    let yearsRemaining: Double
+    let healthScore: Double
+    let activeWarranties: [WarrantyRecord]
+    let nextWarrantyExpiration: Date?
+    let daysUntilWarrantyExpires: Int?
+    let status: ApplianceStatus
+    let totalRepairCost: Double
+    let repairRatio: Double
+    let shouldReviewRepairVsReplace: Bool
+    let riskScore: Double
+    let reliabilityScore: Double
+    let sustainabilityScore: Double
+    let estimatedResaleValue: Double
+    let monthlyReplacementSavingsTarget: Double
+    let lifecycleStage: String
+    let nextMaintenanceDate: Date
+
+    init(_ appliance: Appliance, now: Date = .now, calendar: Calendar = .current) {
+        self.appliance = appliance
+        self.id = String(describing: appliance.persistentModelID)
+
+        name = appliance.name
+        brand = appliance.brand
+        modelNumber = appliance.modelNumber
+        serialNumber = appliance.serialNumber
+        householdName = appliance.householdName
+        category = appliance.category
+        displayBrand = appliance.displayBrand
+        purchaseDate = appliance.purchaseDate
+        purchasePrice = appliance.purchasePrice
+        estimatedReplacementCost = appliance.estimatedReplacementCost
+        invoiceReference = appliance.invoiceReference
+        warrantyDocumentReference = appliance.warrantyDocumentReference
+
+        replacementBudgetTarget = max(appliance.estimatedReplacementCost, appliance.purchasePrice)
+
+        let age = max(0, now.timeIntervalSince(appliance.purchaseDate) / (365.25 * 24 * 60 * 60))
+        ageInYears = age
+        let fullYears = Int(age.rounded(.down))
+        let months = max(0, Int((age - Double(fullYears)) * 12))
+        if fullYears == 0 {
+            ageLabel = months == 1 ? "1 month old" : "\(months) months old"
+        } else {
+            ageLabel = fullYears == 1 ? "1 year old" : "\(fullYears) years old"
+        }
+
+        expectedEndOfLifeDate = calendar.date(
+            byAdding: .year,
+            value: appliance.expectedLifespanYears,
+            to: appliance.purchaseDate
+        ) ?? appliance.purchaseDate
+        yearsRemaining = max(0, Double(appliance.expectedLifespanYears) - age)
+
+        if appliance.expectedLifespanYears > 0 {
+            healthScore = max(0, min(1, 1 - (age / Double(appliance.expectedLifespanYears))))
+        } else {
+            healthScore = 0
+        }
+
+        activeWarranties = appliance.warranties
+            .filter { $0.endDate >= now }
+            .sorted { $0.endDate < $1.endDate }
+        nextWarrantyExpiration = activeWarranties.first?.endDate
+        if let nextWarrantyExpiration {
+            daysUntilWarrantyExpires = calendar.dateComponents([.day], from: now, to: nextWarrantyExpiration).day
+        } else {
+            daysUntilWarrantyExpires = nil
+        }
+
+        totalRepairCost = appliance.serviceLogs.reduce(0) { total, log in
+            log.isRepair ? total + log.cost : total
+        }
+        repairRatio = replacementBudgetTarget > 0 ? totalRepairCost / replacementBudgetTarget : 0
+        shouldReviewRepairVsReplace = repairRatio >= 0.4
+
+        if healthScore < 0.18 {
+            status = .planReplacement
+        } else if let daysUntilWarrantyExpires {
+            status = daysUntilWarrantyExpires <= 30 ? .inspectSoon : .protected
+        } else if healthScore < 0.35 {
+            status = .aging
+        } else {
+            status = .warrantyExpired
+        }
+
+        let ageRisk = 1 - healthScore
+        let repairRisk = min(1, repairRatio)
+        let warrantyRisk = activeWarranties.isEmpty ? 0.18 : 0
+        let claimWindowRisk = (daysUntilWarrantyExpires ?? 999) <= 90 ? 0.14 : 0
+        riskScore = min(1, (ageRisk * 0.58) + (repairRisk * 0.28) + warrantyRisk + claimWindowRisk)
+
+        let brandSeed = Double(abs(appliance.brand.lowercased().unicodeScalars.reduce(0) { $0 + Int($1.value) }) % 18)
+        let reliabilityBase = 0.86 - (brandSeed / 100)
+        reliabilityScore = max(0.48, min(0.96, reliabilityBase - (repairRatio * 0.18)))
+
+        let agePenalty = min(0.48, age / 40)
+        let repairPenalty = min(0.18, repairRatio * 0.12)
+        sustainabilityScore = max(0.28, min(0.98, 0.92 - agePenalty - repairPenalty))
+
+        estimatedResaleValue = replacementBudgetTarget * max(0.04, min(0.52, healthScore * reliabilityScore * 0.58))
+        let monthsRemaining = max(1, yearsRemaining * 12)
+        monthlyReplacementSavingsTarget = replacementBudgetTarget / monthsRemaining
+
+        switch healthScore {
+        case 0.76...1: lifecycleStage = "Prime"
+        case 0.51..<0.76: lifecycleStage = "Watch"
+        case 0.26..<0.51: lifecycleStage = "Aging"
+        default: lifecycleStage = "Replace"
+        }
+
+        let latestServiceDate = appliance.serviceLogs.map(\.serviceDate).max() ?? appliance.purchaseDate
+        nextMaintenanceDate = calendar.date(
+            byAdding: .month,
+            value: category.maintenanceCadenceMonths,
+            to: latestServiceDate
+        ) ?? latestServiceDate
+    }
+}
+
+struct AppliancePortfolioSnapshot {
+    let items: [ApplianceSnapshot]
+    let totalValue: Double
+    let averageHealth: Double
+    let riskLoad: Double
+    let reserve: Double
+    let claimsDue: [ApplianceSnapshot]
+    let serviceDue: [ApplianceSnapshot]
+    let attention: [ApplianceSnapshot]
+    let signals: [Double]
+
+    init(appliances: [Appliance], now: Date = .now, calendar: Calendar = .current) {
+        let snapshots = appliances.map { ApplianceSnapshot($0, now: now, calendar: calendar) }
+        items = snapshots
+        signals = snapshots.map(\.riskScore)
+        totalValue = snapshots.reduce(0) { $0 + max($1.purchasePrice, $1.replacementBudgetTarget) }
+        averageHealth = snapshots.isEmpty ? 0 : snapshots.reduce(0) { $0 + $1.healthScore } / Double(snapshots.count)
+        riskLoad = snapshots.isEmpty ? 0 : snapshots.reduce(0) { $0 + $1.riskScore } / Double(snapshots.count)
+        reserve = snapshots.reduce(0) { $0 + max(0, $1.replacementBudgetTarget * (1 - $1.healthScore)) }
+        claimsDue = snapshots
+            .filter { ($0.daysUntilWarrantyExpires ?? .max) <= 90 }
+            .sorted { ($0.daysUntilWarrantyExpires ?? .max) < ($1.daysUntilWarrantyExpires ?? .max) }
+        serviceDue = snapshots.filter { $0.nextMaintenanceDate <= now }
+        attention = snapshots
+            .filter { $0.riskScore > 0.45 || $0.shouldReviewRepairVsReplace }
+            .sorted { $0.riskScore > $1.riskScore }
+    }
+}
+
 extension ApplianceCategory {
     var maintenanceCadenceMonths: Int {
         switch self {
