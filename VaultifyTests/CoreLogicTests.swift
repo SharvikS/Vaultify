@@ -110,6 +110,129 @@ final class CoreLogicTests: XCTestCase {
         XCTAssertEqual(appliance.nextMaintenanceDate, date(from: latestRepair.serviceDate, byAdding: .month, value: 6))
     }
 
+    func testApplianceSnapshotMatchesLiveModelMetrics() {
+        let appliance = Appliance(
+            name: "Snapshot Washer",
+            brand: "LG",
+            modelNumber: "WM9000",
+            serialNumber: "SNAP123",
+            category: .laundry,
+            purchaseDate: date(byAdding: .year, value: -4),
+            purchasePrice: 1_000,
+            estimatedReplacementCost: 1_350,
+            warranties: [WarrantyRecord(endDate: date(byAdding: .day, value: 45))],
+            serviceLogs: [
+                ServiceLog(serviceDate: date(byAdding: .month, value: -3), cost: 550, isRepair: true)
+            ]
+        )
+
+        let snapshot = ApplianceSnapshot(appliance)
+
+        XCTAssertEqual(snapshot.name, appliance.name)
+        XCTAssertEqual(snapshot.category, appliance.category)
+        XCTAssertEqual(snapshot.replacementBudgetTarget, appliance.replacementBudgetTarget, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.healthScore, appliance.healthScore, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.riskScore, appliance.riskScore, accuracy: 0.0001)
+        XCTAssertEqual(snapshot.status.title, appliance.status.title)
+        XCTAssertEqual(snapshot.lifecycleStage, appliance.lifecycleStage)
+        XCTAssertEqual(snapshot.activeWarranties.count, appliance.activeWarranties.count)
+        XCTAssertEqual(snapshot.nextMaintenanceDate, appliance.nextMaintenanceDate)
+        XCTAssertTrue(snapshot.shouldReviewRepairVsReplace)
+        XCTAssertFalse(snapshot.id.isEmpty)
+    }
+
+    func testPortfolioSnapshotAggregatesAndRanksCoreDashboardSignals() {
+        let protected = Appliance(
+            name: "Protected Fridge",
+            brand: "Samsung",
+            category: .kitchen,
+            purchaseDate: date(byAdding: .month, value: -3),
+            purchasePrice: 2_000,
+            estimatedReplacementCost: 2_400,
+            warranties: [WarrantyRecord(endDate: date(byAdding: .day, value: 25))]
+        )
+        let repairHeavy = Appliance(
+            name: "Repair Heavy Washer",
+            category: .laundry,
+            purchaseDate: date(byAdding: .year, value: -7),
+            purchasePrice: 1_000,
+            serviceLogs: [ServiceLog(serviceDate: date(byAdding: .month, value: -1), cost: 600, isRepair: true)]
+        )
+        let serviceDue = Appliance(
+            name: "Service Due HVAC",
+            category: .hvac,
+            purchaseDate: date(byAdding: .year, value: -2),
+            purchasePrice: 5_000
+        )
+
+        let portfolio = AppliancePortfolioSnapshot(appliances: [protected, repairHeavy, serviceDue])
+
+        XCTAssertEqual(portfolio.items.count, 3)
+        XCTAssertEqual(portfolio.signals.count, 3)
+        XCTAssertEqual(portfolio.totalValue, 8_400, accuracy: 0.0001)
+        assertUnitInterval(portfolio.averageHealth, "average health")
+        assertUnitInterval(portfolio.riskLoad, "risk load")
+        XCTAssertGreaterThan(portfolio.reserve, 0)
+        XCTAssertEqual(portfolio.claimsDue.map(\.name), ["Protected Fridge"])
+        XCTAssertTrue(portfolio.serviceDue.contains { $0.name == "Service Due HVAC" })
+        XCTAssertEqual(portfolio.attention.first?.name, "Repair Heavy Washer")
+    }
+
+    func testDemoSeedIsIdempotentAndChatBrainAnswersFromPortfolio() throws {
+        let schema = Schema([Appliance.self, WarrantyRecord.self, ServiceLog.self])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [configuration])
+        let context = ModelContext(container)
+
+        XCTAssertTrue(DemoVault.seedIfEmpty(context))
+        XCTAssertFalse(DemoVault.seedIfEmpty(context))
+
+        let appliances = try context.fetch(FetchDescriptor<Appliance>())
+        XCTAssertEqual(appliances.count, 7)
+
+        let opening = VaultChatBrain.opening(for: appliances)
+        XCTAssertTrue(opening.contains("7 assets"))
+        XCTAssertTrue(opening.contains("Highest live signal"))
+
+        let riskAnswer = VaultChatBrain.answer("What needs attention?", appliances: appliances)
+        XCTAssertTrue(riskAnswer.contains("Top risk signals"))
+        XCTAssertTrue(riskAnswer.contains("risk"))
+
+        let budgetAnswer = VaultChatBrain.answer("Where should I save first?", appliances: appliances)
+        XCTAssertTrue(budgetAnswer.contains("Replacement target"))
+    }
+
+    func testValueBasedPDFDossierRendersFromSnapshotItems() throws {
+        let appliance = Appliance(
+            name: "Value Snapshot Range",
+            brand: "Bosch",
+            modelNumber: "HGI8056UC",
+            serialNumber: "BOSCH-RANGE-1",
+            category: .kitchen,
+            purchaseDate: date(byAdding: .year, value: -1),
+            purchasePrice: 1_499,
+            estimatedReplacementCost: 1_699,
+            warranties: [WarrantyRecord(providerName: "Bosch", endDate: date(byAdding: .year, value: 2))]
+        )
+        let item = VaultPDF.DossierItem(snapshot: ApplianceSnapshot(appliance))
+
+        let url = try XCTUnwrap(VaultPDF.dossier(
+            title: "Snapshot Dossier",
+            subtitle: "Value-data renderer test.",
+            items: [item],
+            currencyCode: "USD"
+        ))
+
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let size = try XCTUnwrap(attributes[.size] as? NSNumber).intValue
+        XCTAssertGreaterThan(size, 1_000)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(PDFDocument(url: url)).pageCount, 1)
+    }
+
     func testScoresStayFiniteAndBoundedUnderRepeatedGeneratedPortfolios() {
         for run in 0..<25 {
             for index in 0..<40 {
